@@ -1,4 +1,3 @@
-import { nanoid } from 'nanoid'
 import { db, type NoteFlowDatabase, type TaskRecord } from './schema'
 
 export type TaskStatusFilter = 'all' | 'active' | 'completed'
@@ -49,7 +48,7 @@ export const create = async (
 ): Promise<TaskRecord> => {
   const now = Date.now()
   const task: TaskRecord = {
-    id: nanoid(),
+    id: crypto.randomUUID(),
     title: input.title.trim() || 'Untitled task',
     notes: input.notes?.trim() || '',
     dueDate: input.dueDate ?? null,

@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'service-worker.ts',
       registerType: 'prompt',
       includeAssets: [
         'favicon.ico',
@@ -43,11 +46,8 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
-        cleanupOutdatedCaches: true,
-        clientsClaim: false,
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-        navigateFallback: '/index.html',
       },
     }),
   ],

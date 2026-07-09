@@ -54,6 +54,32 @@ body {
   transform: rotate(1deg) translate(3px, 4px);
 }
 
+.stitch-line {
+  position: relative;
+  display: inline-block;
+  width: 28px;
+  height: 2px;
+  overflow: hidden;
+  background: repeating-linear-gradient(
+    90deg,
+    #d97706 0 4px,
+    transparent 4px 8px
+  );
+}
+
+.stitch-line.is-syncing {
+  animation: stitch-slide 0.8s linear infinite;
+}
+
+@keyframes stitch-slide {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: 8px;
+  }
+}
+
 button,
 input,
 textarea,

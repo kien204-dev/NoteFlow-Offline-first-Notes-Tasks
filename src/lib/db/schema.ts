@@ -24,9 +24,15 @@ export type TaskRecord = {
   dirty: boolean
 }
 
+export type SyncMetaRecord = {
+  key: 'lastSyncedAt'
+  value: string
+}
+
 export class NoteFlowDatabase extends Dexie {
   notes!: Table<NoteRecord, string>
   tasks!: Table<TaskRecord, string>
+  syncMeta!: Table<SyncMetaRecord, string>
 
   constructor(name = 'noteflow') {
     super(name)
@@ -39,6 +45,12 @@ export class NoteFlowDatabase extends Dexie {
       // `*tags` is a Dexie multi-entry index for fast tag filters.
       notes: '&id, updatedAt, deletedAt, *tags',
       tasks: '&id, updatedAt, deletedAt, completed, dueDate, *tags',
+    })
+
+    this.version(2).stores({
+      notes: '&id, updatedAt, deletedAt, dirty, *tags',
+      tasks: '&id, updatedAt, deletedAt, dirty, completed, dueDate, *tags',
+      syncMeta: '&key',
     })
   }
 }

@@ -6,12 +6,14 @@ import { TaskForm } from './features/tasks/TaskForm'
 import { TaskList } from './features/tasks/TaskList'
 import { useTasksUiStore } from './features/tasks/store'
 import { InstallPrompt } from './lib/pwa/InstallPrompt'
-import { OfflineIndicator } from './lib/pwa/OfflineIndicator'
 import { UpdatePrompt } from './lib/pwa/UpdatePrompt'
+import { SyncStatusBadge } from './lib/sync/SyncStatusBadge'
+import { useSyncController } from './lib/sync/useSyncController'
 
 type WorkspaceTab = 'notes' | 'tasks'
 
 function App() {
+  useSyncController()
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('notes')
   const [isDark, setIsDark] = useState(false)
   const isNoteEditorOpen = useNotesUiStore((state) => state.isEditorOpen)
@@ -44,11 +46,11 @@ function App() {
               NoteFlow
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600 dark:text-zinc-400">
-              Notes and tasks write to IndexedDB first. Server sync stays out of this step.
+              Notes and tasks write to IndexedDB first, then sync when the network is available.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <OfflineIndicator />
+            <SyncStatusBadge />
             <InstallPrompt />
             <div
               className="grid grid-cols-2 rounded-sm border border-stone-300 bg-paper p-1 dark:border-zinc-700 dark:bg-zinc-900"

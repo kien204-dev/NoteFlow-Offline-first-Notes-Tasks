@@ -1,4 +1,3 @@
-import { nanoid } from 'nanoid'
 import { db, type NoteFlowDatabase, type NoteRecord } from './schema'
 
 export type NoteFilter = {
@@ -36,7 +35,7 @@ export const create = async (
 ): Promise<NoteRecord> => {
   const now = Date.now()
   const note: NoteRecord = {
-    id: nanoid(),
+    id: crypto.randomUUID(),
     title: input.title.trim() || 'Untitled note',
     content: input.content,
     tags: normalizeTags(input.tags),
