@@ -1,10 +1,11 @@
-import 'dotenv/config'
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { createPool } from './db.js'
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const pool = createPool()
-const migration = await readFile(join(process.cwd(), 'server/migrations/001_init.sql'), 'utf8')
+const migration = await readFile(path.resolve(__dirname, 'migrations/001_init.sql'), 'utf8')
 
 try {
   await pool.query(migration)
