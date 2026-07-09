@@ -23,6 +23,18 @@ NoteFlow is a portfolio-grade offline-first notes and tasks app. The UI writes t
 - Conflict resolver with 3 choices: keep local, keep server, merge manually
 - Vitest coverage for repositories, sync engine, backend API, and conflict UI
 
+## Repository Layout
+
+```text
+NoteFlow/
+|-- client/   # React/Vite PWA
+|-- server/   # Express/Postgres API
+|-- docs/     # screenshots and project docs
+`-- package.json
+```
+
+The repo uses npm workspaces. `client/package.json` owns frontend dependencies, `server/package.json` owns backend dependencies, and the root `package.json` only orchestrates common scripts.
+
 ## Architecture
 
 ```mermaid
@@ -52,7 +64,7 @@ Tasks intentionally use a simpler strategy. If either side marks a task complete
 
 ## Local Setup
 
-Install dependencies:
+Install all workspaces from the repo root:
 
 ```bash
 npm install
@@ -83,7 +95,7 @@ npm run server:migrate
 Start the backend:
 
 ```bash
-npm run server
+npm run dev:server
 ```
 
 Start the frontend:
@@ -92,7 +104,7 @@ Start the frontend:
 npm run dev
 ```
 
-If the backend is not on `http://localhost:4000`, set a root `.env` for Vite:
+If the backend is not on `http://localhost:4000`, set `client/.env` for Vite:
 
 ```env
 VITE_API_BASE_URL=http://localhost:4000
@@ -101,12 +113,24 @@ VITE_API_BASE_URL=http://localhost:4000
 ## Scripts
 
 ```bash
+npm run dev
+npm run dev:server
+npm run dev:all
 npm run build
-npm run test:run
+npm test
 npm run preview
 npm run server:migrate
-npm run server
 ```
+
+Workspace-specific commands:
+
+```bash
+npm run build --workspace=client
+npm run test:run --workspace=client
+npm test --workspace=server
+```
+
+For deployment, set the frontend root directory to `client/` and the backend root directory to `server/`.
 
 ## Accessibility And PWA
 
@@ -138,5 +162,5 @@ Automated tests cover:
 Run:
 
 ```bash
-npm run test:run
+npm test
 ```

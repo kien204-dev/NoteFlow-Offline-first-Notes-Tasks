@@ -1,9 +1,12 @@
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { newDb } from 'pg-mem'
 import request from 'supertest'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createApp } from './app.js'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const createTestPool = async () => {
   const db = newDb()
@@ -14,7 +17,7 @@ const createTestPool = async () => {
   })
   const { Pool } = db.adapters.createPg()
   const pool = new Pool()
-  const migration = await readFile(join(process.cwd(), 'server/migrations/001_init.sql'), 'utf8')
+  const migration = await readFile(path.resolve(__dirname, 'migrations/001_init.sql'), 'utf8')
   await pool.query(migration)
   return pool
 }
