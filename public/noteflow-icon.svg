@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">NoteFlow app icon</title>
+  <rect width="512" height="512" rx="96" fill="#fffdf5"/>
+  <rect x="72" y="68" width="368" height="376" rx="28" fill="#fffaf0" stroke="#26211b" stroke-width="18"/>
+  <path d="M128 150h256M128 220h256M128 290h170" stroke="#b8a991" stroke-width="16" stroke-linecap="round"/>
+  <path d="M152 370V142l208 228V142" fill="none" stroke="#26211b" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="382" cy="368" r="34" fill="#d97706"/>
+</svg>

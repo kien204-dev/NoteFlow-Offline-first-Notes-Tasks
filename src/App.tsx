@@ -5,6 +5,9 @@ import { useNotesUiStore } from './features/notes/store'
 import { TaskForm } from './features/tasks/TaskForm'
 import { TaskList } from './features/tasks/TaskList'
 import { useTasksUiStore } from './features/tasks/store'
+import { InstallPrompt } from './lib/pwa/InstallPrompt'
+import { OfflineIndicator } from './lib/pwa/OfflineIndicator'
+import { UpdatePrompt } from './lib/pwa/UpdatePrompt'
 
 type WorkspaceTab = 'notes' | 'tasks'
 
@@ -45,6 +48,8 @@ function App() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <OfflineIndicator />
+            <InstallPrompt />
             <div
               className="grid grid-cols-2 rounded-sm border border-stone-300 bg-paper p-1 dark:border-zinc-700 dark:bg-zinc-900"
               aria-label="Workspace tabs"
@@ -85,6 +90,7 @@ function App() {
           </div>
         </div>
       </section>
+      <UpdatePrompt />
     </main>
   )
 }
