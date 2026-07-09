@@ -15,7 +15,7 @@ const jsonResponse = (body: PushResponse | PullResponse) =>
 
 const pushResponse = (savedNotes: string[] = []): PushResponse => ({
   saved: { notes: savedNotes, tasks: [] },
-  serverWins: { notes: [], tasks: [] },
+  conflicts: { notes: [], tasks: [] },
 })
 
 const pullResponse = (body: Partial<PullResponse> = {}): PullResponse => ({
@@ -77,6 +77,7 @@ describe('runSync', () => {
                 createdAt: new Date(1_000).toISOString(),
                 updatedAt: new Date(2_000).toISOString(),
                 deletedAt: null,
+                baseVersion: null,
               },
             ],
           }),
@@ -104,6 +105,7 @@ describe('runSync', () => {
                 createdAt: new Date(1_000).toISOString(),
                 updatedAt: new Date(2_000).toISOString(),
                 deletedAt: null,
+                baseVersion: null,
               },
             ],
           }),
@@ -131,6 +133,7 @@ describe('runSync', () => {
                 createdAt: new Date(1_000).toISOString(),
                 updatedAt: new Date(4_000).toISOString(),
                 deletedAt: new Date(4_000).toISOString(),
+                baseVersion: null,
               },
             ],
           }),
@@ -140,5 +143,39 @@ describe('runSync', () => {
     await runSync({ database, fetcher, isOnline: () => true })
 
     expect(await database.notes.get(note.id)).toBeUndefined()
+  })
+
+  it('stores note conflicts and keeps the local record dirty', async () => {
+    const note = await notesRepo.create({ title: 'Local draft', content: 'Mine' }, database)
+    const fetcher = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        saved: { notes: [], tasks: [] },
+        conflicts: {
+          notes: [
+            {
+              id: note.id,
+              serverVersion: {
+                id: note.id,
+                title: 'Server draft',
+                content: 'Theirs',
+                tags: [],
+                createdAt: new Date(1_000).toISOString(),
+                updatedAt: new Date(2_000).toISOString(),
+                deletedAt: null,
+                baseVersion: null,
+              },
+            },
+          ],
+          tasks: [],
+        },
+      }),
+    ).mockResolvedValueOnce(jsonResponse(pullResponse()))
+
+    await runSync({ database, fetcher, isOnline: () => true })
+
+    expect((await database.notes.get(note.id))?.dirty).toBe(true)
+    expect(await database.conflicts.get(`note:${note.id}`)).toMatchObject({
+      entity: 'note',
+    })
   })
 })

@@ -9,6 +9,7 @@ export type NoteRecord = {
   updatedAt: number
   deletedAt: number | null
   dirty: boolean
+  baseVersion: number | null
 }
 
 export type TaskRecord = {
@@ -22,6 +23,7 @@ export type TaskRecord = {
   updatedAt: number
   deletedAt: number | null
   dirty: boolean
+  baseVersion: number | null
 }
 
 export type SyncMetaRecord = {
@@ -29,10 +31,19 @@ export type SyncMetaRecord = {
   value: string
 }
 
+export type ConflictRecord = {
+  id: string
+  entity: 'note' | 'task'
+  localVersion: unknown
+  serverVersion: unknown
+  detectedAt: number
+}
+
 export class NoteFlowDatabase extends Dexie {
   notes!: Table<NoteRecord, string>
   tasks!: Table<TaskRecord, string>
   syncMeta!: Table<SyncMetaRecord, string>
+  conflicts!: Table<ConflictRecord, string>
 
   constructor(name = 'noteflow') {
     super(name)
@@ -51,6 +62,13 @@ export class NoteFlowDatabase extends Dexie {
       notes: '&id, updatedAt, deletedAt, dirty, *tags',
       tasks: '&id, updatedAt, deletedAt, dirty, completed, dueDate, *tags',
       syncMeta: '&key',
+    })
+
+    this.version(3).stores({
+      notes: '&id, updatedAt, deletedAt, dirty, baseVersion, *tags',
+      tasks: '&id, updatedAt, deletedAt, dirty, baseVersion, completed, dueDate, *tags',
+      syncMeta: '&key',
+      conflicts: '&id, entity, detectedAt',
     })
   }
 }

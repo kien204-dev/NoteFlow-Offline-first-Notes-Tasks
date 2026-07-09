@@ -1,27 +1,38 @@
 const toIso = (value) => (value ? new Date(value).toISOString() : null)
 const toDate = (value) => (value == null ? null : new Date(value))
+const sameVersion = (left, right) => toIso(left) === toIso(right)
 
-const mapNoteFromDb = (row) => ({
-  id: row.id,
-  title: row.title,
-  content: row.content,
-  tags: row.tags ?? [],
-  createdAt: new Date(row.created_at).toISOString(),
-  updatedAt: new Date(row.updated_at).toISOString(),
-  deletedAt: toIso(row.deleted_at),
-})
+const mapNoteFromDb = (row) => {
+  const updatedAt = new Date(row.updated_at).toISOString()
 
-const mapTaskFromDb = (row) => ({
-  id: row.id,
-  title: row.title,
-  notes: row.notes ?? '',
-  dueDate: toIso(row.due_date),
-  completed: row.completed,
-  tags: row.tags ?? [],
-  createdAt: new Date(row.created_at).toISOString(),
-  updatedAt: new Date(row.updated_at).toISOString(),
-  deletedAt: toIso(row.deleted_at),
-})
+  return {
+    id: row.id,
+    title: row.title,
+    content: row.content,
+    tags: row.tags ?? [],
+    createdAt: new Date(row.created_at).toISOString(),
+    updatedAt,
+    deletedAt: toIso(row.deleted_at),
+    baseVersion: updatedAt,
+  }
+}
+
+const mapTaskFromDb = (row) => {
+  const updatedAt = new Date(row.updated_at).toISOString()
+
+  return {
+    id: row.id,
+    title: row.title,
+    notes: row.notes ?? '',
+    dueDate: toIso(row.due_date),
+    completed: row.completed,
+    tags: row.tags ?? [],
+    createdAt: new Date(row.created_at).toISOString(),
+    updatedAt,
+    deletedAt: toIso(row.deleted_at),
+    baseVersion: updatedAt,
+  }
+}
 
 const normalizeArray = (value) => (Array.isArray(value) ? value : [])
 
@@ -39,10 +50,11 @@ export const createSyncRepository = (pool) => {
   const upsertNote = async (note) => {
     const existing = await getNote(note.id)
 
-    // Temporary step-5 last-write-wins: the row with the newest updatedAt wins.
-    // Step 6 can replace this decision point with explicit conflict records.
-    if (existing && new Date(existing.updatedAt) > new Date(note.updatedAt)) {
-      return { status: 'server-won', record: existing }
+    // Optimistic concurrency control: the client sends the server version it
+    // edited from (`baseVersion`). If the server has moved since then, another
+    // client changed this note and we must ask the user instead of overwriting.
+    if (existing && !sameVersion(note.baseVersion, existing.updatedAt)) {
+      return { status: 'conflict', record: existing }
     }
 
     await pool.query(
@@ -73,10 +85,21 @@ export const createSyncRepository = (pool) => {
 
   const upsertTask = async (task) => {
     const existing = await getTask(task.id)
+    const taskToSave =
+      existing && !sameVersion(task.baseVersion, existing.updatedAt)
+        ? {
+            ...((new Date(existing.updatedAt) > new Date(task.updatedAt) ? existing : task)),
+            completed: Boolean(existing.completed || task.completed),
+            updatedAt:
+              new Date(existing.updatedAt) > new Date(task.updatedAt)
+                ? existing.updatedAt
+                : task.updatedAt,
+          }
+        : task
 
-    if (existing && new Date(existing.updatedAt) > new Date(task.updatedAt)) {
-      return { status: 'server-won', record: existing }
-    }
+    // Tasks are intentionally simpler than notes: text loss is lower-risk, and
+    // if either side completed a task we keep it completed. Other fields retain
+    // the newest timestamp until step 6-style note conflicts are needed here.
 
     await pool.query(
       `
@@ -93,19 +116,19 @@ export const createSyncRepository = (pool) => {
           deleted_at = excluded.deleted_at
       `,
       [
-        task.id,
-        task.title,
-        task.notes ?? '',
-        toDate(task.dueDate),
-        Boolean(task.completed),
-        normalizeArray(task.tags),
-        toDate(task.createdAt),
-        toDate(task.updatedAt),
-        toDate(task.deletedAt),
+        taskToSave.id,
+        taskToSave.title,
+        taskToSave.notes ?? '',
+        toDate(taskToSave.dueDate),
+        Boolean(taskToSave.completed),
+        normalizeArray(taskToSave.tags),
+        toDate(taskToSave.createdAt),
+        toDate(taskToSave.updatedAt),
+        toDate(taskToSave.deletedAt),
       ],
     )
 
-    return { status: 'saved', id: task.id }
+    return { status: 'saved', id: taskToSave.id }
   }
 
   const pullSince = async (since) => {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NoteEditor } from './features/notes/NoteEditor'
 import { NoteList } from './features/notes/NoteList'
 import { useNotesUiStore } from './features/notes/store'
+import { ConflictResolver } from './features/sync/ConflictResolver'
 import { TaskForm } from './features/tasks/TaskForm'
 import { TaskList } from './features/tasks/TaskList'
 import { useTasksUiStore } from './features/tasks/store'
@@ -16,6 +17,7 @@ function App() {
   useSyncController()
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('notes')
   const [isDark, setIsDark] = useState(false)
+  const [isResolvingConflicts, setIsResolvingConflicts] = useState(false)
   const isNoteEditorOpen = useNotesUiStore((state) => state.isEditorOpen)
   const isTaskEditorOpen = useTasksUiStore((state) => state.isEditorOpen)
   const closeNoteEditor = useNotesUiStore((state) => state.closeEditor)
@@ -30,6 +32,7 @@ function App() {
 
   const handleTabChange = (tab: WorkspaceTab) => {
     setActiveTab(tab)
+    setIsResolvingConflicts(false)
     closeNoteEditor()
     closeTaskEditor()
   }
@@ -50,7 +53,7 @@ function App() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <SyncStatusBadge />
+            <SyncStatusBadge onOpenConflicts={() => setIsResolvingConflicts(true)} />
             <InstallPrompt />
             <div
               className="grid grid-cols-2 rounded-sm border border-stone-300 bg-paper p-1 dark:border-zinc-700 dark:bg-zinc-900"
@@ -82,6 +85,9 @@ function App() {
           </div>
         </header>
 
+        {isResolvingConflicts ? (
+          <ConflictResolver onClose={() => setIsResolvingConflicts(false)} />
+        ) : (
         <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(320px,420px)_1fr]">
           <div className={`${isEditorVisible ? 'hidden lg:block' : 'block'} min-h-0`}>
             {activeTab === 'notes' ? <NoteList /> : <TaskList />}
@@ -91,6 +97,7 @@ function App() {
             {activeTab === 'notes' ? <NoteEditor /> : <TaskForm />}
           </div>
         </div>
+        )}
       </section>
       <UpdatePrompt />
     </main>

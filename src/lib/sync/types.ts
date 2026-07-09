@@ -8,16 +8,24 @@ export type SyncStatusSnapshot = {
   error: string | null
 }
 
-export type ServerNote = Omit<NoteRecord, 'createdAt' | 'updatedAt' | 'deletedAt' | 'dirty'> & {
+export type ServerNote = Omit<
+  NoteRecord,
+  'createdAt' | 'updatedAt' | 'deletedAt' | 'dirty' | 'baseVersion'
+> & {
   createdAt: string
   updatedAt: string
   deletedAt: string | null
+  baseVersion: string | null
 }
 
-export type ServerTask = Omit<TaskRecord, 'createdAt' | 'updatedAt' | 'deletedAt' | 'dirty'> & {
+export type ServerTask = Omit<
+  TaskRecord,
+  'createdAt' | 'updatedAt' | 'deletedAt' | 'dirty' | 'baseVersion'
+> & {
   createdAt: string
   updatedAt: string
   deletedAt: string | null
+  baseVersion: string | null
 }
 
 export type PushPayload = {
@@ -30,9 +38,9 @@ export type PushResponse = {
     notes: string[]
     tasks: string[]
   }
-  serverWins: {
-    notes: ServerNote[]
-    tasks: ServerTask[]
+  conflicts: {
+    notes: Array<{ id: string; serverVersion: ServerNote }>
+    tasks: Array<{ id: string; serverVersion: ServerTask }>
   }
 }
 

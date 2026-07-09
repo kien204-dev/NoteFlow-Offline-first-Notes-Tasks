@@ -27,6 +27,7 @@ const notePayload = (overrides = {}) => ({
   createdAt: '2026-07-09T00:00:00.000Z',
   updatedAt: '2026-07-09T00:01:00.000Z',
   deletedAt: null,
+  baseVersion: null,
   ...overrides,
 })
 
@@ -48,7 +49,7 @@ describe('sync API', () => {
       .expect(200)
 
     expect(pushResponse.body.saved.notes).toEqual([note.id])
-    expect(pushResponse.body.serverWins.notes).toEqual([])
+    expect(pushResponse.body.conflicts.notes).toEqual([])
 
     const pullResponse = await request(app)
       .get('/api/sync/pull')
@@ -60,17 +61,19 @@ describe('sync API', () => {
     ])
   })
 
-  it('keeps the server row when server updated_at is newer', async () => {
+  it('returns a conflict when baseVersion does not match the server version', async () => {
     const id = crypto.randomUUID()
     const serverNote = notePayload({
       id,
       title: 'Server wins',
       updatedAt: '2026-07-09T00:05:00.000Z',
+      baseVersion: null,
     })
     const staleClientNote = notePayload({
       id,
       title: 'Stale client',
       updatedAt: '2026-07-09T00:02:00.000Z',
+      baseVersion: '2026-07-09T00:01:00.000Z',
     })
 
     await request(app).post('/api/sync/push').send({ notes: [serverNote], tasks: [] }).expect(200)
@@ -81,7 +84,9 @@ describe('sync API', () => {
       .expect(200)
 
     expect(response.body.saved.notes).toEqual([])
-    expect(response.body.serverWins.notes).toMatchObject([{ id, title: 'Server wins' }])
+    expect(response.body.conflicts.notes).toMatchObject([
+      { id, serverVersion: { id, title: 'Server wins' } },
+    ])
   })
 
   it('returns tombstones during pull', async () => {

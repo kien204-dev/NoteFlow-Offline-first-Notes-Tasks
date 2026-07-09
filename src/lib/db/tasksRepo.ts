@@ -58,6 +58,7 @@ export const create = async (
     updatedAt: now,
     deletedAt: null,
     dirty: true,
+    baseVersion: null,
   }
 
   await database.tasks.add(task)

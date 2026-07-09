@@ -26,21 +26,22 @@ export const createApp = ({ pool, allowedOrigins } = {}) => {
       const notes = Array.isArray(request.body?.notes) ? request.body.notes : []
       const tasks = Array.isArray(request.body?.tasks) ? request.body.tasks : []
       const saved = { notes: [], tasks: [] }
-      const serverWins = { notes: [], tasks: [] }
+      const conflicts = { notes: [], tasks: [] }
 
       for (const note of notes) {
         const result = await syncRepository.upsertNote(note)
         if (result.status === 'saved') saved.notes.push(result.id)
-        if (result.status === 'server-won') serverWins.notes.push(result.record)
+        if (result.status === 'conflict') {
+          conflicts.notes.push({ id: note.id, serverVersion: result.record })
+        }
       }
 
       for (const task of tasks) {
         const result = await syncRepository.upsertTask(task)
         if (result.status === 'saved') saved.tasks.push(result.id)
-        if (result.status === 'server-won') serverWins.tasks.push(result.record)
       }
 
-      response.json({ saved, serverWins })
+      response.json({ saved, conflicts })
     } catch (error) {
       next(error)
     }

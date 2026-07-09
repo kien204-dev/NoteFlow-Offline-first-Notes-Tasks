@@ -1,4 +1,10 @@
-import { db, type NoteFlowDatabase, type NoteRecord, type TaskRecord } from '../db/schema'
+import {
+  db,
+  type ConflictRecord,
+  type NoteFlowDatabase,
+  type NoteRecord,
+  type TaskRecord,
+} from '../db/schema'
 import { useSyncStatusStore } from './statusStore'
 import { createSyncApi, type SyncApiOptions } from './syncApi'
 import type { ServerNote, ServerTask } from './types'
@@ -23,6 +29,7 @@ const noteToServer = (note: NoteRecord): ServerNote => ({
   createdAt: toIso(note.createdAt) ?? epoch,
   updatedAt: toIso(note.updatedAt) ?? epoch,
   deletedAt: toIso(note.deletedAt),
+  baseVersion: toIso(note.baseVersion),
 })
 
 const taskToServer = (task: TaskRecord): ServerTask => ({
@@ -35,6 +42,7 @@ const taskToServer = (task: TaskRecord): ServerTask => ({
   createdAt: toIso(task.createdAt) ?? epoch,
   updatedAt: toIso(task.updatedAt) ?? epoch,
   deletedAt: toIso(task.deletedAt),
+  baseVersion: toIso(task.baseVersion),
 })
 
 const noteFromServer = (note: ServerNote): NoteRecord => ({
@@ -43,6 +51,7 @@ const noteFromServer = (note: ServerNote): NoteRecord => ({
   updatedAt: toTimestamp(note.updatedAt) ?? 0,
   deletedAt: toTimestamp(note.deletedAt),
   dirty: false,
+  baseVersion: toTimestamp(note.updatedAt),
 })
 
 const taskFromServer = (task: ServerTask): TaskRecord => ({
@@ -52,6 +61,7 @@ const taskFromServer = (task: ServerTask): TaskRecord => ({
   updatedAt: toTimestamp(task.updatedAt) ?? 0,
   deletedAt: toTimestamp(task.deletedAt),
   dirty: false,
+  baseVersion: toTimestamp(task.updatedAt),
 })
 
 const getLastSyncedAt = async (database: NoteFlowDatabase) =>
@@ -65,9 +75,47 @@ const clearDirtyForSaved = async (
   saved: { notes: string[]; tasks: string[] },
 ) => {
   await database.transaction('rw', database.notes, database.tasks, async () => {
-    await Promise.all(saved.notes.map((id) => database.notes.update(id, { dirty: false })))
-    await Promise.all(saved.tasks.map((id) => database.tasks.update(id, { dirty: false })))
+    await Promise.all(
+      saved.notes.map(async (id) => {
+        const note = await database.notes.get(id)
+        if (note) await database.notes.update(id, { dirty: false, baseVersion: note.updatedAt })
+      }),
+    )
+    await Promise.all(
+      saved.tasks.map(async (id) => {
+        const task = await database.tasks.get(id)
+        if (task) await database.tasks.update(id, { dirty: false, baseVersion: task.updatedAt })
+      }),
+    )
   })
+}
+
+const storeConflicts = async (
+  database: NoteFlowDatabase,
+  dirtyNotes: NoteRecord[],
+  conflicts: {
+    notes: Array<{ id: string; serverVersion: ServerNote }>
+    tasks: Array<{ id: string; serverVersion: ServerTask }>
+  },
+) => {
+  const dirtyNotesById = new Map(dirtyNotes.map((note) => [note.id, note]))
+  const detectedAt = Date.now()
+  const records: ConflictRecord[] = conflicts.notes.flatMap((conflict) => {
+      const localVersion = dirtyNotesById.get(conflict.id)
+      if (!localVersion) return []
+
+      return [{
+        id: `note:${conflict.id}`,
+        entity: 'note' as const,
+        localVersion: noteToServer(localVersion),
+        serverVersion: conflict.serverVersion,
+        detectedAt,
+      }]
+    })
+
+  if (records.length) {
+    await database.conflicts.bulkPut(records)
+  }
 }
 
 const mergeNote = async (database: NoteFlowDatabase, serverNote: ServerNote) => {
@@ -128,6 +176,7 @@ export const runSync = async ({
     })
 
     await clearDirtyForSaved(database, pushResponse.saved)
+    await storeConflicts(database, dirtyNotes, pushResponse.conflicts)
 
     const pullResponse = await api.pull(lastSyncedAt)
 
