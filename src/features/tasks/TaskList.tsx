@@ -1,0 +1,105 @@
+import { TaskItem } from './TaskItem'
+import { useTasksUiStore, useTasksView } from './store'
+
+const statuses = [
+  { label: 'All', value: 'all' },
+  { label: 'Open', value: 'active' },
+  { label: 'Done', value: 'completed' },
+] as const
+
+export function TaskList() {
+  const { tasks, tags, query, selectedTags, status } = useTasksView()
+  const setQuery = useTasksUiStore((state) => state.setQuery)
+  const setStatus = useTasksUiStore((state) => state.setStatus)
+  const toggleTag = useTasksUiStore((state) => state.toggleTag)
+  const clearTags = useTasksUiStore((state) => state.clearTags)
+  const editingTaskId = useTasksUiStore((state) => state.editingTaskId)
+  const openEditor = useTasksUiStore((state) => state.openEditor)
+
+  return (
+    <section className="flex h-full min-h-0 flex-col gap-4" aria-label="Tasks">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-serif text-2xl font-semibold text-ink dark:text-stone-50">
+            Tasks
+          </h2>
+          <button
+            type="button"
+            onClick={() => openEditor(null)}
+            className="rounded-sm bg-ink px-3 py-2 text-sm font-semibold text-paper transition hover:bg-stone-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink dark:bg-amber-200 dark:text-zinc-950"
+          >
+            New task
+          </button>
+        </div>
+
+        <label className="text-sm font-medium text-stone-700 dark:text-zinc-300">
+          Search tasks
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="mt-2 w-full rounded-sm border border-stone-300 bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-ink dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            placeholder="Title or notes"
+          />
+        </label>
+
+        <div className="grid grid-cols-3 rounded-sm border border-stone-300 p-1 dark:border-zinc-700">
+          {statuses.map((statusOption) => (
+            <button
+              key={statusOption.value}
+              type="button"
+              onClick={() => setStatus(statusOption.value)}
+              className={`rounded-sm px-2 py-1.5 text-xs font-semibold ${
+                status === statusOption.value
+                  ? 'bg-ink text-paper dark:bg-amber-200 dark:text-zinc-950'
+                  : 'text-stone-600 dark:text-zinc-300'
+              }`}
+            >
+              {statusOption.label}
+            </button>
+          ))}
+        </div>
+
+        {tags.length ? (
+          <div className="flex flex-wrap gap-2" aria-label="Task tag filters">
+            {tags.map((tag) => (
+              <button
+                type="button"
+                key={tag}
+                onClick={() => toggleTag(tag)}
+                className={`rounded-sm border px-2.5 py-1 text-xs font-medium ${
+                  selectedTags.includes(tag)
+                    ? 'border-ink bg-ink text-paper dark:border-amber-200 dark:bg-amber-200 dark:text-zinc-950'
+                    : 'border-stone-300 bg-paper text-stone-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+            {selectedTags.length ? (
+              <button type="button" onClick={clearTags} className="text-xs text-stone-500 underline">
+                Clear
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="grid min-h-0 gap-3 overflow-y-auto pr-1">
+        {tasks.length ? (
+          tasks.map((task) => (
+            <TaskItem
+              key={task.id}
+              task={task}
+              isSelected={editingTaskId === task.id}
+              onSelect={openEditor}
+            />
+          ))
+        ) : (
+          <div className="rounded-sm border border-dashed border-stone-300 bg-paper/70 p-6 text-sm text-stone-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+            No tasks match this view.
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
