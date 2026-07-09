@@ -15,6 +15,8 @@ export function TaskList() {
   const clearTags = useTasksUiStore((state) => state.clearTags)
   const editingTaskId = useTasksUiStore((state) => state.editingTaskId)
   const openEditor = useTasksUiStore((state) => state.openEditor)
+  const isLoading = tasks === undefined
+  const visibleTasks = tasks ?? []
 
   return (
     <section className="flex h-full min-h-0 flex-col gap-4" aria-label="Tasks">
@@ -85,8 +87,12 @@ export function TaskList() {
       </div>
 
       <div className="grid min-h-0 gap-3 overflow-y-auto pr-1">
-        {tasks.length ? (
-          tasks.map((task) => (
+        {isLoading ? (
+          <div className="rounded-sm border border-stone-200 bg-paper/80 p-6 text-sm text-stone-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+            Loading local tasks...
+          </div>
+        ) : visibleTasks.length ? (
+          visibleTasks.map((task) => (
             <TaskItem
               key={task.id}
               task={task}
@@ -95,8 +101,15 @@ export function TaskList() {
             />
           ))
         ) : (
-          <div className="rounded-sm border border-dashed border-stone-300 bg-paper/70 p-6 text-sm text-stone-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-            No tasks match this view.
+          <div className="rounded-sm border border-dashed border-stone-300 bg-paper/70 p-6 text-sm text-stone-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+            <p>No tasks match this view.</p>
+            <button
+              type="button"
+              onClick={() => openEditor(null)}
+              className="mt-3 rounded-sm bg-ink px-3 py-2 text-sm font-semibold text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink dark:bg-amber-200 dark:text-zinc-950"
+            >
+              Create first task
+            </button>
           </div>
         )}
       </div>

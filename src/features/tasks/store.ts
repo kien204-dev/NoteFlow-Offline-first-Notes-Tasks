@@ -47,7 +47,6 @@ export const useTasksView = () => {
   const tasks = useLiveQuery(
     () => tasksRepo.list({ query: debouncedQuery, tags: selectedTags, status }),
     [debouncedQuery, selectedTagKey, status],
-    [],
   )
 
   const tags = useLiveQuery(() => tasksRepo.getAllTags(), [], [])

@@ -42,7 +42,6 @@ export const useNotesView = () => {
   const notes = useLiveQuery(
     () => notesRepo.list({ query: debouncedQuery, tags: selectedTags }),
     [debouncedQuery, selectedTagKey],
-    [],
   )
 
   const tags = useLiveQuery(() => notesRepo.getAllTags(), [], [])

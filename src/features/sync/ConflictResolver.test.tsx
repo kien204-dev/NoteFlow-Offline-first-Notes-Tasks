@@ -46,7 +46,7 @@ describe('ConflictResolver', () => {
     const user = userEvent.setup()
     render(<ConflictResolver onClose={vi.fn()} />)
 
-    await user.click(await screen.findByRole('button', { name: 'Giữ bản của tôi' }))
+    await user.click(await screen.findByRole('button', { name: 'Keep my version' }))
 
     expect(actionMocks.keepLocalNoteConflict).toHaveBeenCalledWith(
       'note:00000000-0000-4000-8000-000000000001',
@@ -57,7 +57,7 @@ describe('ConflictResolver', () => {
     const user = userEvent.setup()
     render(<ConflictResolver onClose={vi.fn()} />)
 
-    await user.click(await screen.findByRole('button', { name: 'Giữ bản trên server' }))
+    await user.click(await screen.findByRole('button', { name: 'Keep server version' }))
 
     expect(actionMocks.keepServerNoteConflict).toHaveBeenCalledWith(
       'note:00000000-0000-4000-8000-000000000001',
@@ -68,14 +68,26 @@ describe('ConflictResolver', () => {
     const user = userEvent.setup()
     render(<ConflictResolver onClose={vi.fn()} />)
 
-    await user.click(await screen.findByRole('button', { name: 'Chỉnh sửa thủ công' }))
-    await user.clear(screen.getByLabelText('Tiêu đề'))
-    await user.type(screen.getByLabelText('Tiêu đề'), 'Merged note')
-    await user.click(screen.getByRole('button', { name: 'Lưu bản đã chỉnh' }))
+    await user.click(await screen.findByRole('button', { name: 'Edit manually' }))
+    await user.clear(screen.getByLabelText('Title'))
+    await user.type(screen.getByLabelText('Title'), 'Merged note')
+    await user.click(screen.getByRole('button', { name: 'Save merged version' }))
 
     expect(actionMocks.saveMergedNoteConflict).toHaveBeenCalledWith(
       'note:00000000-0000-4000-8000-000000000001',
       expect.objectContaining({ title: 'Merged note' }),
     )
+  })
+
+  it('focuses inside the dialog and closes on Escape', async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    render(<ConflictResolver onClose={onClose} />)
+
+    expect(await screen.findByRole('button', { name: 'Close' })).toHaveFocus()
+
+    await user.keyboard('{Escape}')
+
+    expect(onClose).toHaveBeenCalled()
   })
 })

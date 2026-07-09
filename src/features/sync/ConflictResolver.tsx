@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../lib/db/schema'
 import {
@@ -19,6 +19,9 @@ const splitTags = (value: string) =>
     .filter(Boolean)
 
 export function ConflictResolver({ onClose }: ConflictResolverProps) {
+  const dialogRef = useRef<HTMLElement | null>(null)
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null)
+  const previouslyFocusedElement = useRef<HTMLElement | null>(null)
   const conflicts = useLiveQuery(
     () => db.conflicts.where('entity').equals('note').sortBy('detectedAt'),
     [],
@@ -38,13 +41,66 @@ export function ConflictResolver({ onClose }: ConflictResolverProps) {
     setTags(localNote.tags.join(', '))
   }, [localNote])
 
+  useEffect(() => {
+    previouslyFocusedElement.current = document.activeElement as HTMLElement | null
+    closeButtonRef.current?.focus()
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose()
+        return
+      }
+
+      if (event.key !== 'Tab' || !dialogRef.current) return
+
+      const focusableElements = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => !element.hasAttribute('disabled'))
+
+      if (!focusableElements.length) return
+
+      const firstElement = focusableElements[0]
+      const lastElement = focusableElements[focusableElements.length - 1]
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault()
+        lastElement.focus()
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault()
+        firstElement.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      previouslyFocusedElement.current?.focus()
+    }
+  }, [onClose])
+
   if (!conflicts.length) {
     return (
-      <section className="rounded-sm border border-stone-200 bg-paper p-5 shadow-paper dark:border-zinc-800 dark:bg-zinc-900">
+      <section
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="conflict-resolver-title"
+        className="rounded-sm border border-stone-200 bg-paper p-5 shadow-paper dark:border-zinc-800 dark:bg-zinc-900"
+      >
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-serif text-2xl font-semibold">Không còn ghi chú cần xem lại</h2>
-          <button type="button" onClick={onClose} className="rounded-sm border px-3 py-2 text-sm">
-            Đóng
+          <h2 id="conflict-resolver-title" className="font-serif text-2xl font-semibold">
+            No notes need review
+          </h2>
+          <button
+            ref={closeButtonRef}
+            type="button"
+            onClick={onClose}
+            className="rounded-sm border px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            Close
           </button>
         </div>
       </section>
@@ -52,16 +108,29 @@ export function ConflictResolver({ onClose }: ConflictResolverProps) {
   }
 
   return (
-    <section className="rounded-sm border border-amber-300 bg-paper p-5 shadow-paper dark:border-amber-900 dark:bg-zinc-900">
+    <section
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="conflict-resolver-title"
+      className="rounded-sm border border-amber-300 bg-paper p-5 shadow-paper dark:border-amber-900 dark:bg-zinc-900"
+    >
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">
-            Cần bạn chọn
+            Review needed
           </p>
-          <h2 className="font-serif text-2xl font-semibold">Ghi chú đã được sửa ở nơi khác</h2>
+          <h2 id="conflict-resolver-title" className="font-serif text-2xl font-semibold">
+            This note changed somewhere else
+          </h2>
         </div>
-        <button type="button" onClick={onClose} className="rounded-sm border px-3 py-2 text-sm">
-          Đóng
+        <button
+          ref={closeButtonRef}
+          type="button"
+          onClick={onClose}
+          className="rounded-sm border px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        >
+          Close
         </button>
       </div>
 
@@ -72,11 +141,14 @@ export function ConflictResolver({ onClose }: ConflictResolverProps) {
           const isEditing = editingConflictId === conflict.id
 
           return (
-            <article key={conflict.id} className="rounded-sm border border-stone-200 p-4 dark:border-zinc-700">
+            <article
+              key={conflict.id}
+              className="rounded-sm border border-stone-200 p-4 dark:border-zinc-700"
+            >
               <h3 className="font-serif text-xl font-semibold">{localVersion.title}</h3>
               <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                <VersionPanel title="Bản của bạn" note={localVersion} />
-                <VersionPanel title="Bản trên server" note={serverVersion} />
+                <VersionPanel title="Your version" note={localVersion} />
+                <VersionPanel title="Server version" note={serverVersion} />
               </div>
 
               {isEditing ? (
@@ -93,19 +165,19 @@ export function ConflictResolver({ onClose }: ConflictResolverProps) {
                   }}
                 >
                   <label className="text-sm font-medium">
-                    Tiêu đề
+                    Title
                     <input
                       value={title}
                       onChange={(event) => setTitle(event.target.value)}
-                      className="mt-2 w-full rounded-sm border border-stone-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+                      className="mt-2 w-full rounded-sm border border-stone-300 bg-white px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink dark:border-zinc-700 dark:bg-zinc-950"
                     />
                   </label>
                   <label className="text-sm font-medium">
-                    Nội dung
+                    Content
                     <textarea
                       value={content}
                       onChange={(event) => setContent(event.target.value)}
-                      className="mt-2 min-h-32 w-full rounded-sm border border-stone-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+                      className="mt-2 min-h-32 w-full rounded-sm border border-stone-300 bg-white px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink dark:border-zinc-700 dark:bg-zinc-950"
                     />
                   </label>
                   <label className="text-sm font-medium">
@@ -113,19 +185,22 @@ export function ConflictResolver({ onClose }: ConflictResolverProps) {
                     <input
                       value={tags}
                       onChange={(event) => setTags(event.target.value)}
-                      className="mt-2 w-full rounded-sm border border-stone-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+                      className="mt-2 w-full rounded-sm border border-stone-300 bg-white px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink dark:border-zinc-700 dark:bg-zinc-950"
                     />
                   </label>
                   <div className="flex flex-wrap justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => setEditingConflictId(null)}
-                      className="rounded-sm border px-3 py-2 text-sm"
+                      className="rounded-sm border px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                     >
-                      Hủy
+                      Cancel
                     </button>
-                    <button type="submit" className="rounded-sm bg-ink px-3 py-2 text-sm font-semibold text-paper dark:bg-amber-200 dark:text-zinc-950">
-                      Lưu bản đã chỉnh
+                    <button
+                      type="submit"
+                      className="rounded-sm bg-ink px-3 py-2 text-sm font-semibold text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink dark:bg-amber-200 dark:text-zinc-950"
+                    >
+                      Save merged version
                     </button>
                   </div>
                 </form>
@@ -134,23 +209,23 @@ export function ConflictResolver({ onClose }: ConflictResolverProps) {
                   <button
                     type="button"
                     onClick={() => keepLocalNoteConflict(conflict.id)}
-                    className="rounded-sm bg-ink px-3 py-2 text-sm font-semibold text-paper dark:bg-amber-200 dark:text-zinc-950"
+                    className="rounded-sm bg-ink px-3 py-2 text-sm font-semibold text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink dark:bg-amber-200 dark:text-zinc-950"
                   >
-                    Giữ bản của tôi
+                    Keep my version
                   </button>
                   <button
                     type="button"
                     onClick={() => keepServerNoteConflict(conflict.id)}
-                    className="rounded-sm border border-stone-300 px-3 py-2 text-sm dark:border-zinc-700"
+                    className="rounded-sm border border-stone-300 px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink dark:border-zinc-700"
                   >
-                    Giữ bản trên server
+                    Keep server version
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditingConflictId(conflict.id)}
-                    className="rounded-sm border border-stone-300 px-3 py-2 text-sm dark:border-zinc-700"
+                    className="rounded-sm border border-stone-300 px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink dark:border-zinc-700"
                   >
-                    Chỉnh sửa thủ công
+                    Edit manually
                   </button>
                 </div>
               )}
@@ -170,7 +245,7 @@ function VersionPanel({ title, note }: { title: string; note: ServerNote }) {
       </p>
       <h4 className="mt-2 font-serif text-lg font-semibold">{note.title}</h4>
       <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-stone-700 dark:text-zinc-300">
-        {note.content || 'Không có nội dung.'}
+        {note.content || 'No content.'}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         {note.tags.map((tag) => (

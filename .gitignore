@@ -13,6 +13,9 @@ dist-ssr
 *.local
 .env
 server/.env
+.agents/
+skills-lock.json
+.tmp-chrome-screenshots/
 
 # Editor directories and files
 .vscode/*

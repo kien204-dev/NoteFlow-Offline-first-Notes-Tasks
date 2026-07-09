@@ -8,6 +8,8 @@ export function NoteList() {
   const clearTags = useNotesUiStore((state) => state.clearTags)
   const editingNoteId = useNotesUiStore((state) => state.editingNoteId)
   const openEditor = useNotesUiStore((state) => state.openEditor)
+  const isLoading = notes === undefined
+  const visibleNotes = notes ?? []
 
   return (
     <section className="flex h-full min-h-0 flex-col gap-4" aria-label="Notes">
@@ -61,8 +63,12 @@ export function NoteList() {
       </div>
 
       <div className="grid min-h-0 gap-3 overflow-y-auto pr-1">
-        {notes.length ? (
-          notes.map((note) => (
+        {isLoading ? (
+          <div className="rounded-sm border border-stone-200 bg-paper/80 p-6 text-sm text-stone-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+            Loading local notes...
+          </div>
+        ) : visibleNotes.length ? (
+          visibleNotes.map((note) => (
             <NoteCard
               key={note.id}
               note={note}
@@ -71,8 +77,15 @@ export function NoteList() {
             />
           ))
         ) : (
-          <div className="rounded-sm border border-dashed border-stone-300 bg-paper/70 p-6 text-sm text-stone-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-            No notes match this view.
+          <div className="rounded-sm border border-dashed border-stone-300 bg-paper/70 p-6 text-sm text-stone-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+            <p>No notes match this view.</p>
+            <button
+              type="button"
+              onClick={() => openEditor(null)}
+              className="mt-3 rounded-sm bg-ink px-3 py-2 text-sm font-semibold text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink dark:bg-amber-200 dark:text-zinc-950"
+            >
+              Create first note
+            </button>
           </div>
         )}
       </div>
