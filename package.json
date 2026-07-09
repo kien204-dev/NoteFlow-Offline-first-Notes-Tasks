@@ -3,17 +3,18 @@
   "private": true,
   "version": "0.0.0",
   "workspaces": [
-    "client",
-    "server"
+    "front-end",
+    "backend"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=client",
-    "dev:server": "npm run dev --workspace=server",
+    "dev": "npm run dev --workspace=front-end",
+    "dev:server": "npm run dev --workspace=backend",
     "dev:all": "concurrently \"npm:dev:server\" \"npm:dev\"",
-    "build": "npm run build --workspace=client",
-    "preview": "npm run preview --workspace=client",
-    "server:migrate": "npm run migrate --workspace=server",
-    "test": "npm run test:run --workspace=client; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; npm test --workspace=server"
+    "build": "npm run build --workspace=front-end",
+    "preview": "npm run preview --workspace=front-end",
+    "server:migrate": "npm run migrate --workspace=backend",
+    "pretest": "npm run test:run --workspace=front-end",
+    "test": "npm test --workspace=backend"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

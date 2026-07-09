@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; vite build",
+    "prebuild": "tsc",
+    "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run"

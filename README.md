@@ -2,6 +2,8 @@
 
 NoteFlow is a portfolio-grade offline-first notes and tasks app. The UI writes to IndexedDB first, then syncs to an Express/Postgres backend when the network is available. The project focuses on readable architecture, testable sync logic, PWA installability, and conflict handling that avoids silent data loss.
 
+Live demo: pending production URL.
+
 ## Screenshots
 
 ![Main workspace](docs/screenshots/main.png)
@@ -27,13 +29,13 @@ NoteFlow is a portfolio-grade offline-first notes and tasks app. The UI writes t
 
 ```text
 NoteFlow/
-|-- client/   # React/Vite PWA
-|-- server/   # Express/Postgres API
+|-- front-end/ # React/Vite PWA
+|-- backend/   # Express/Postgres API
 |-- docs/     # screenshots and project docs
 `-- package.json
 ```
 
-The repo uses npm workspaces. `client/package.json` owns frontend dependencies, `server/package.json` owns backend dependencies, and the root `package.json` only orchestrates common scripts.
+The repo uses npm workspaces. `front-end/package.json` owns frontend dependencies, `backend/package.json` owns backend dependencies, and the root `package.json` only orchestrates common scripts.
 
 ## Architecture
 
@@ -70,7 +72,7 @@ Install all workspaces from the repo root:
 npm install
 ```
 
-Create `server/.env` from `server/.env.example`:
+Create `backend/.env` from `backend/.env.example`:
 
 ```env
 DATABASE_URL=postgres://postgres:123456@localhost:5433/noteflow
@@ -104,7 +106,7 @@ Start the frontend:
 npm run dev
 ```
 
-If the backend is not on `http://localhost:4000`, set `client/.env` for Vite:
+If the backend is not on `http://localhost:4000`, set `front-end/.env` for Vite:
 
 ```env
 VITE_API_BASE_URL=http://localhost:4000
@@ -125,12 +127,40 @@ npm run server:migrate
 Workspace-specific commands:
 
 ```bash
-npm run build --workspace=client
-npm run test:run --workspace=client
-npm test --workspace=server
+npm run build --workspace=front-end
+npm run test:run --workspace=front-end
+npm test --workspace=backend
 ```
 
-For deployment, set the frontend root directory to `client/` and the backend root directory to `server/`.
+For deployment, set the frontend root directory to `front-end/` and the backend root directory to `backend/`.
+
+## Production Deploy
+
+Neon:
+
+1. Create a Neon Postgres project.
+2. Copy the connection string with `sslmode=require`.
+3. Temporarily put that value in `backend/.env` as `DATABASE_URL`.
+4. Run `npm run server:migrate`.
+5. Remove the production secret from local `.env` after migration.
+
+Render:
+
+- Root Directory: `backend`
+- Build Command: `npm install`
+- Start Command: `npm start`
+- Environment variables:
+  - `DATABASE_URL`: Neon connection string with `sslmode=require`
+  - `FRONTEND_ORIGIN`: production Vercel URL
+  - `PORT`: leave unset unless Render requires otherwise; Render injects it automatically
+
+Vercel:
+
+- Root Directory: `front-end`
+- Build Command: `npm run build`
+- Output Directory: `dist`
+- Environment variable:
+  - `VITE_API_BASE_URL`: production Render backend URL
 
 ## Accessibility And PWA
 
