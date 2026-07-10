@@ -1,4 +1,5 @@
 import { db, type NoteFlowDatabase, type TaskRecord } from './schema'
+import { matchesTags, normalizeTags, sortTags } from './filterUtils'
 
 export type TaskStatusFilter = 'all' | 'active' | 'completed'
 
@@ -20,14 +21,6 @@ export type CreateTaskInput = {
 export type UpdateTaskInput = Partial<
   Pick<TaskRecord, 'title' | 'notes' | 'dueDate' | 'completed' | 'tags'>
 >
-
-const normalizeTags = (tags: string[] = []) =>
-  Array.from(new Set(tags.map((tag) => tag.trim()).filter(Boolean))).sort((a, b) =>
-    a.localeCompare(b),
-  )
-
-const matchesTags = (recordTags: string[], selectedTags: string[] = []) =>
-  selectedTags.length === 0 || selectedTags.every((tag) => recordTags.includes(tag))
 
 const matchesStatus = (task: TaskRecord, status: TaskStatusFilter = 'all') => {
   if (status === 'active') return !task.completed
@@ -134,7 +127,5 @@ export const search = (query: string, database: NoteFlowDatabase = db) =>
 
 export const getAllTags = async (database: NoteFlowDatabase = db) => {
   const tasks = await list({}, database)
-  return Array.from(new Set(tasks.flatMap((task) => task.tags))).sort((a, b) =>
-    a.localeCompare(b),
-  )
+  return sortTags(Array.from(new Set(tasks.flatMap((task) => task.tags))))
 }

@@ -36,6 +36,22 @@ const mapTaskFromDb = (row) => {
 
 const normalizeArray = (value) => (Array.isArray(value) ? value : [])
 
+const isNewer = (left, right) => new Date(left) > new Date(right)
+
+const resolveTaskConflict = (existing, incoming) => {
+  if (!existing || sameVersion(incoming.baseVersion, existing.updatedAt)) {
+    return incoming
+  }
+
+  const newest = isNewer(existing.updatedAt, incoming.updatedAt) ? existing : incoming
+
+  return {
+    ...newest,
+    completed: Boolean(existing.completed || incoming.completed),
+    updatedAt: newest.updatedAt,
+  }
+}
+
 export const createSyncRepository = (pool) => {
   const getNote = async (id) => {
     const result = await pool.query('select * from notes where id = $1', [id])
@@ -85,21 +101,10 @@ export const createSyncRepository = (pool) => {
 
   const upsertTask = async (task) => {
     const existing = await getTask(task.id)
-    const taskToSave =
-      existing && !sameVersion(task.baseVersion, existing.updatedAt)
-        ? {
-            ...((new Date(existing.updatedAt) > new Date(task.updatedAt) ? existing : task)),
-            completed: Boolean(existing.completed || task.completed),
-            updatedAt:
-              new Date(existing.updatedAt) > new Date(task.updatedAt)
-                ? existing.updatedAt
-                : task.updatedAt,
-          }
-        : task
-
     // Tasks are intentionally simpler than notes: text loss is lower-risk, and
     // if either side completed a task we keep it completed. Other fields retain
     // the newest timestamp until step 6-style note conflicts are needed here.
+    const taskToSave = resolveTaskConflict(existing, task)
 
     await pool.query(
       `

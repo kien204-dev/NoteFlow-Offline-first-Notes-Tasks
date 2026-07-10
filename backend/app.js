@@ -3,6 +3,8 @@ import express from 'express'
 import { logger } from './logger.js'
 import { createSyncRepository } from './syncRepository.js'
 
+const readSyncItems = (body, key) => (Array.isArray(body?.[key]) ? body[key] : [])
+
 export const createApp = ({ pool, allowedOrigins } = {}) => {
   const app = express()
   const syncRepository = createSyncRepository(pool)
@@ -24,17 +26,18 @@ export const createApp = ({ pool, allowedOrigins } = {}) => {
 
   app.post('/api/sync/push', async (request, response, next) => {
     try {
-      const notes = Array.isArray(request.body?.notes) ? request.body.notes : []
-      const tasks = Array.isArray(request.body?.tasks) ? request.body.tasks : []
+      const notes = readSyncItems(request.body, 'notes')
+      const tasks = readSyncItems(request.body, 'tasks')
       const saved = { notes: [], tasks: [] }
       const conflicts = { notes: [], tasks: [] }
 
       for (const note of notes) {
         const result = await syncRepository.upsertNote(note)
-        if (result.status === 'saved') saved.notes.push(result.id)
         if (result.status === 'conflict') {
           conflicts.notes.push({ id: note.id, serverVersion: result.record })
+          continue
         }
+        saved.notes.push(result.id)
       }
 
       for (const task of tasks) {

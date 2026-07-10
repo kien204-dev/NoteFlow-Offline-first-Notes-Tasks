@@ -101,17 +101,19 @@ const storeConflicts = async (
   const dirtyNotesById = new Map(dirtyNotes.map((note) => [note.id, note]))
   const detectedAt = Date.now()
   const records: ConflictRecord[] = conflicts.notes.flatMap((conflict) => {
-      const localVersion = dirtyNotesById.get(conflict.id)
-      if (!localVersion) return []
+    const localVersion = dirtyNotesById.get(conflict.id)
+    if (!localVersion) return []
 
-      return [{
+    return [
+      {
         id: `note:${conflict.id}`,
         entity: 'note' as const,
         localVersion: noteToServer(localVersion),
         serverVersion: conflict.serverVersion,
         detectedAt,
-      }]
-    })
+      },
+    ]
+  })
 
   if (records.length) {
     await database.conflicts.bulkPut(records)
