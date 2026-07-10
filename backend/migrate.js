@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createPool } from './db.js'
@@ -6,10 +6,19 @@ import { logger } from './logger.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const pool = createPool()
-const migration = await readFile(path.resolve(__dirname, 'migrations/001_init.sql'), 'utf8')
+const migrationsDir = path.resolve(__dirname, 'migrations')
 
 try {
-  await pool.query(migration)
+  const migrationFiles = (await readdir(migrationsDir))
+    .filter((file) => /^\d+_.*\.sql$/.test(file))
+    .sort((left, right) => left.localeCompare(right))
+
+  for (const file of migrationFiles) {
+    const migration = await readFile(path.join(migrationsDir, file), 'utf8')
+    await pool.query(migration)
+    logger.info(`Applied migration ${file}`)
+  }
+
   logger.info('Database migrated')
 } finally {
   await pool.end()

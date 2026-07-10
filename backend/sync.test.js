@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { newDb } from 'pg-mem'
@@ -17,8 +17,16 @@ const createTestPool = async () => {
   })
   const { Pool } = db.adapters.createPg()
   const pool = new Pool()
-  const migration = await readFile(path.resolve(__dirname, 'migrations/001_init.sql'), 'utf8')
-  await pool.query(migration)
+  const migrationsDir = path.resolve(__dirname, 'migrations')
+  const migrationFiles = (await readdir(migrationsDir))
+    .filter((file) => /^\d+_.*\.sql$/.test(file))
+    .sort((left, right) => left.localeCompare(right))
+
+  for (const file of migrationFiles) {
+    const migration = await readFile(path.join(migrationsDir, file), 'utf8')
+    await pool.query(migration)
+  }
+
   return pool
 }
 
