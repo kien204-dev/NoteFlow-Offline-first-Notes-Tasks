@@ -1,5 +1,6 @@
 import cors from 'cors'
 import express from 'express'
+import { createAuthRouter } from './auth/routes.js'
 import { logger } from './logger.js'
 import { createSyncRepository } from './syncRepository.js'
 
@@ -19,6 +20,8 @@ export const createApp = ({ pool, allowedOrigins } = {}) => {
     }),
   )
   app.use(express.json({ limit: '1mb' }))
+
+  app.use('/api/auth', createAuthRouter({ pool }))
 
   app.get('/api/health', (_request, response) => {
     response.json({ ok: true })
