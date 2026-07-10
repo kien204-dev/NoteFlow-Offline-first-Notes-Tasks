@@ -1,3 +1,4 @@
+import { EmptyState, ListSkeleton } from '../../components/PanelStates'
 import { NoteCard } from './NoteCard'
 import { useNotesUiStore, useNotesView } from './store'
 
@@ -64,9 +65,7 @@ export function NoteList() {
 
       <div className="grid min-h-0 gap-3 overflow-y-auto pr-1">
         {isLoading ? (
-          <div className="rounded-sm border border-stone-200 bg-paper/80 p-6 text-sm text-stone-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-            Loading local notes...
-          </div>
+          <ListSkeleton label="Loading local notes" />
         ) : visibleNotes.length ? (
           visibleNotes.map((note) => (
             <NoteCard
@@ -77,16 +76,16 @@ export function NoteList() {
             />
           ))
         ) : (
-          <div className="rounded-sm border border-dashed border-stone-300 bg-paper/70 p-6 text-sm text-stone-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-            <p>No notes match this view.</p>
-            <button
-              type="button"
-              onClick={() => openEditor(null)}
-              className="mt-3 rounded-sm bg-ink px-3 py-2 text-sm font-semibold text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink dark:bg-amber-200 dark:text-zinc-950"
-            >
-              Create first note
-            </button>
-          </div>
+          <EmptyState
+            title={query || selectedTags.length ? 'No notes match this view' : 'No notes yet'}
+            description={
+              query || selectedTags.length
+                ? 'Try a different search or clear the selected tags.'
+                : 'Start with a short idea, a meeting note, or a Markdown checklist.'
+            }
+            actionLabel="Create first note"
+            onAction={() => openEditor(null)}
+          />
         )}
       </div>
     </section>

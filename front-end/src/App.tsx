@@ -39,7 +39,16 @@ function App() {
 
   return (
     <main className="min-h-screen bg-stone-100 text-ink dark:bg-zinc-950 dark:text-zinc-50">
-      <section className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
+      <a
+        href="#workspace"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-sm focus:bg-ink focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-paper dark:focus:bg-amber-200 dark:focus:text-zinc-950"
+      >
+        Skip to workspace
+      </a>
+      <section
+        id="workspace"
+        className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8"
+      >
         <header className="flex flex-col gap-4 border-b border-stone-300 pb-5 dark:border-zinc-800 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">
@@ -64,11 +73,12 @@ function App() {
                   key={tab}
                   type="button"
                   onClick={() => handleTabChange(tab)}
-                  className={`rounded-sm px-4 py-2 text-sm font-semibold capitalize ${
+                  className={`rounded-sm px-4 py-2 text-sm font-semibold capitalize transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink active:translate-y-px dark:focus-visible:outline-amber-200 ${
                     activeTab === tab
                       ? 'bg-ink text-paper dark:bg-amber-200 dark:text-zinc-950'
-                      : 'text-stone-600 dark:text-zinc-300'
+                      : 'text-stone-600 hover:text-ink dark:text-zinc-300 dark:hover:text-stone-50'
                   }`}
+                  aria-pressed={activeTab === tab}
                 >
                   {tab}
                 </button>
@@ -77,7 +87,7 @@ function App() {
             <button
               type="button"
               onClick={() => setIsDark((value) => !value)}
-              className="rounded-sm border border-stone-300 bg-paper px-4 py-2 text-sm font-semibold dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded-sm border border-stone-300 bg-paper px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 hover:shadow-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink active:translate-y-0 dark:border-zinc-700 dark:bg-zinc-900 dark:focus-visible:outline-amber-200"
               aria-label="Toggle dark mode"
             >
               {isDark ? 'Light' : 'Dark'}
@@ -88,15 +98,15 @@ function App() {
         {isResolvingConflicts ? (
           <ConflictResolver onClose={() => setIsResolvingConflicts(false)} />
         ) : (
-        <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(320px,420px)_1fr]">
-          <div className={`${isEditorVisible ? 'hidden lg:block' : 'block'} min-h-0`}>
-            {activeTab === 'notes' ? <NoteList /> : <TaskList />}
-          </div>
+          <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(320px,420px)_1fr]">
+            <div className={`${isEditorVisible ? 'hidden lg:block' : 'block'} min-h-0`}>
+              {activeTab === 'notes' ? <NoteList /> : <TaskList />}
+            </div>
 
-          <div className={`${isEditorVisible ? 'block' : 'hidden lg:block'} min-h-0`}>
-            {activeTab === 'notes' ? <NoteEditor /> : <TaskForm />}
+            <div className={`${isEditorVisible ? 'block' : 'hidden lg:block'} min-h-0`}>
+              {activeTab === 'notes' ? <NoteEditor /> : <TaskForm />}
+            </div>
           </div>
-        </div>
         )}
       </section>
       <UpdatePrompt />
