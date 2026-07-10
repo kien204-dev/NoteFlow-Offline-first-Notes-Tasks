@@ -1,5 +1,6 @@
 import cors from 'cors'
 import express from 'express'
+import { logger } from './logger.js'
 import { createSyncRepository } from './syncRepository.js'
 
 export const createApp = ({ pool, allowedOrigins } = {}) => {
@@ -57,7 +58,7 @@ export const createApp = ({ pool, allowedOrigins } = {}) => {
   })
 
   app.use((error, _request, response, _next) => {
-    console.error(error)
+    logger.error(error)
     response.status(500).json({ error: 'Internal server error' })
   })
 
