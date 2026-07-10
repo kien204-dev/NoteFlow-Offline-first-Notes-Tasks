@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import * as notesRepo from '../../lib/db/notesRepo'
+import { MarkdownPreview } from './MarkdownPreview'
 import { useNotesUiStore } from './store'
 
 const splitTags = (value: string) =>
@@ -20,6 +21,7 @@ export function NoteEditor() {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [tags, setTags] = useState('')
+  const [contentMode, setContentMode] = useState<'write' | 'preview'>('write')
 
   useEffect(() => {
     setTitle(note?.title ?? '')
@@ -77,15 +79,47 @@ export function NoteEditor() {
           />
         </label>
 
-        <label className="flex min-h-0 flex-1 flex-col text-sm font-medium text-stone-700 dark:text-zinc-300">
-          Content
-          <textarea
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-            className="mt-2 min-h-52 flex-1 resize-none rounded-sm border border-stone-300 bg-white px-3 py-3 text-sm leading-6 text-ink outline-none focus:border-ink dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-            placeholder="Write freely. It is saved locally first."
-          />
-        </label>
+        <div className="flex min-h-0 flex-1 flex-col text-sm font-medium text-stone-700 dark:text-zinc-300">
+          <div className="flex items-center justify-between gap-3">
+            <label htmlFor="note-content">Content</label>
+            <div
+              className="inline-flex rounded-sm border border-stone-300 bg-stone-50 p-0.5 dark:border-zinc-700 dark:bg-zinc-950"
+              aria-label="Content mode"
+            >
+              {(['write', 'preview'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setContentMode(mode)}
+                  className={`rounded-sm px-3 py-1 text-xs font-semibold capitalize focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink dark:focus-visible:outline-amber-200 ${
+                    contentMode === mode
+                      ? 'bg-ink text-paper dark:bg-amber-200 dark:text-zinc-950'
+                      : 'text-stone-600 hover:text-ink dark:text-zinc-300 dark:hover:text-stone-50'
+                  }`}
+                  aria-pressed={contentMode === mode}
+                >
+                  {mode === 'write' ? 'Write' : 'Preview'}
+                </button>
+              ))}
+            </div>
+          </div>
+          {contentMode === 'write' ? (
+            <textarea
+              id="note-content"
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              className="mt-2 min-h-52 flex-1 resize-none rounded-sm border border-stone-300 bg-white px-3 py-3 text-sm leading-6 text-ink outline-none focus:border-ink dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+              placeholder="Write freely. Markdown is saved as plain text."
+            />
+          ) : (
+            <div
+              className="mt-2 min-h-52 flex-1 overflow-auto rounded-sm border border-stone-300 bg-white px-3 py-3 dark:border-zinc-700 dark:bg-zinc-950"
+              aria-label="Content preview"
+            >
+              <MarkdownPreview content={content} />
+            </div>
+          )}
+        </div>
 
         <label className="text-sm font-medium text-stone-700 dark:text-zinc-300">
           Tags

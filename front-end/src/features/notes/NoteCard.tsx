@@ -1,4 +1,5 @@
 import type { NoteRecord } from '../../lib/db/schema'
+import { MarkdownPreview } from './MarkdownPreview'
 
 type NoteCardProps = {
   note: NoteRecord
@@ -30,9 +31,9 @@ export function NoteCard({ note, isSelected, onSelect }: NoteCardProps) {
         <h3 className="font-serif text-xl font-semibold leading-tight text-ink dark:text-stone-50">
           {note.title}
         </h3>
-        <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm leading-6 text-stone-600 dark:text-zinc-300">
-          {note.content || 'No content yet.'}
-        </p>
+        <div className="mt-2 max-h-[4.5rem] overflow-hidden">
+          <MarkdownPreview content={note.content} compact />
+        </div>
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-stone-500 dark:text-zinc-400">
         <span>{formatDate(note.updatedAt)}</span>
