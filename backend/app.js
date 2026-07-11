@@ -1,5 +1,6 @@
 import cors from 'cors'
 import express from 'express'
+import { requireAuth } from './auth/requireAuth.js'
 import { createAuthRouter } from './auth/routes.js'
 import { logger } from './logger.js'
 import { createSyncRepository } from './syncRepository.js'
@@ -27,7 +28,7 @@ export const createApp = ({ pool, allowedOrigins } = {}) => {
     response.json({ ok: true })
   })
 
-  app.post('/api/sync/push', async (request, response, next) => {
+  app.post('/api/sync/push', requireAuth, async (request, response, next) => {
     try {
       const notes = readSyncItems(request.body, 'notes')
       const tasks = readSyncItems(request.body, 'tasks')
@@ -35,7 +36,7 @@ export const createApp = ({ pool, allowedOrigins } = {}) => {
       const conflicts = { notes: [], tasks: [] }
 
       for (const note of notes) {
-        const result = await syncRepository.upsertNote(note)
+        const result = await syncRepository.upsertNote(request.userId, note)
         if (result.status === 'conflict') {
           conflicts.notes.push({ id: note.id, serverVersion: result.record })
           continue
@@ -44,7 +45,7 @@ export const createApp = ({ pool, allowedOrigins } = {}) => {
       }
 
       for (const task of tasks) {
-        const result = await syncRepository.upsertTask(task)
+        const result = await syncRepository.upsertTask(request.userId, task)
         if (result.status === 'saved') saved.tasks.push(result.id)
       }
 
@@ -54,10 +55,10 @@ export const createApp = ({ pool, allowedOrigins } = {}) => {
     }
   })
 
-  app.get('/api/sync/pull', async (request, response, next) => {
+  app.get('/api/sync/pull', requireAuth, async (request, response, next) => {
     try {
       const since = typeof request.query.since === 'string' ? request.query.since : null
-      response.json(await syncRepository.pullSince(since))
+      response.json(await syncRepository.pullSince(request.userId, since))
     } catch (error) {
       next(error)
     }
