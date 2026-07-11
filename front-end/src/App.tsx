@@ -58,7 +58,7 @@ function App() {
               NoteFlow
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600 dark:text-zinc-400">
-              Notes and tasks write to IndexedDB first, then sync when the network is available.
+              Work offline without worry — everything saves on your device first and syncs the moment you're back online.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
