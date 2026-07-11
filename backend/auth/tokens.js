@@ -32,3 +32,16 @@ export const verifyRefreshToken = (token) => {
     email: payload.email,
   }
 }
+
+export const verifyAccessToken = (token) => {
+  const payload = jwt.verify(token, getJwtSecret())
+
+  if (!payload || typeof payload !== 'object' || payload.type !== 'access') {
+    throw new Error('Invalid access token')
+  }
+
+  return {
+    userId: payload.userId,
+    email: payload.email,
+  }
+}
