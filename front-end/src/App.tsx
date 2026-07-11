@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react'
+import { AuthGate } from './features/auth/AuthGate'
+import { useAuthStore } from './features/auth/authStore'
+import { getCurrentRoute, navigateTo, subscribeToRouteChanges } from './features/auth/navigation'
 import { NoteEditor } from './features/notes/NoteEditor'
 import { NoteList } from './features/notes/NoteList'
 import { useNotesUiStore } from './features/notes/store'
@@ -14,6 +17,8 @@ import { useSyncController } from './lib/sync/useSyncController'
 type WorkspaceTab = 'notes' | 'tasks'
 
 function App() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const [route, setRoute] = useState(getCurrentRoute)
   useSyncController()
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('notes')
   const [isDark, setIsDark] = useState(false)
@@ -30,11 +35,28 @@ function App() {
     document.documentElement.classList.toggle('dark', isDark)
   }, [isDark])
 
+  useEffect(() => subscribeToRouteChanges(() => setRoute(getCurrentRoute())), [])
+
+  useEffect(() => {
+    if (!isAuthenticated && route === '/') {
+      navigateTo('/login')
+      return
+    }
+
+    if (isAuthenticated && (route === '/login' || route === '/register')) {
+      navigateTo('/')
+    }
+  }, [isAuthenticated, route])
+
   const handleTabChange = (tab: WorkspaceTab) => {
     setActiveTab(tab)
     setIsResolvingConflicts(false)
     closeNoteEditor()
     closeTaskEditor()
+  }
+
+  if (!isAuthenticated || route === '/login' || route === '/register') {
+    return <AuthGate route={route === '/register' ? '/register' : '/login'} />
   }
 
   return (
@@ -58,7 +80,7 @@ function App() {
               NoteFlow
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600 dark:text-zinc-400">
-              Work offline without worry — everything saves on your device first and syncs the moment you're back online.
+              Work offline without worry - everything saves on your device first and syncs the moment you're back online.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

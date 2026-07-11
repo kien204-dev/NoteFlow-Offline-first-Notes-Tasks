@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import App from './App'
+import { useAuthStore } from './features/auth/authStore'
 
 vi.mock('virtual:pwa-register/react', () => ({
   useRegisterSW: () => ({
@@ -13,10 +14,40 @@ vi.mock('./lib/sync/useSyncController', () => ({
 }))
 
 describe('App', () => {
-  it('renders the NoteFlow scaffold', () => {
+  beforeEach(() => {
+    window.history.replaceState({}, '', '/')
+    useAuthStore.getState().clearAuth()
+  })
+
+  it('redirects unauthenticated users to login', () => {
     render(<App />)
 
     expect(screen.getByRole('heading', { name: 'NoteFlow' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Login' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/login')
+  })
+
+  it('renders the workspace for authenticated users', () => {
+    useAuthStore.getState().setAuth({
+      accessToken: 'access-token',
+      user: { id: 'user-1', email: 'ada@example.com' },
+    })
+
+    render(<App />)
+
     expect(screen.getByRole('button', { name: 'New note' })).toBeInTheDocument()
+  })
+
+  it('redirects authenticated users away from login', () => {
+    window.history.replaceState({}, '', '/login')
+    useAuthStore.getState().setAuth({
+      accessToken: 'access-token',
+      user: { id: 'user-1', email: 'ada@example.com' },
+    })
+
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: 'New note' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/')
   })
 })
