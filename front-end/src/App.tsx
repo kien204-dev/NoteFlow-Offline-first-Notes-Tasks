@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AuthGate } from './features/auth/AuthGate'
+import { LogoutControl } from './features/auth/LogoutControl'
 import { useAuthStore } from './features/auth/authStore'
 import { getCurrentRoute, navigateTo, subscribeToRouteChanges } from './features/auth/navigation'
 import { NoteEditor } from './features/notes/NoteEditor'
@@ -114,6 +115,7 @@ function App() {
             >
               {isDark ? 'Light' : 'Dark'}
             </button>
+            <LogoutControl />
           </div>
         </header>
 
