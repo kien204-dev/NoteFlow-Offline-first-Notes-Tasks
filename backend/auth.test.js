@@ -54,7 +54,7 @@ describe('auth API', () => {
     process.env.REFRESH_TOKEN_COOKIE_SAME_SITE = 'lax'
 
     pool = await createTestPool()
-    app = createApp({ pool, allowedOrigins: '*' })
+    app = createApp({ pool, allowedOrigins: 'http://localhost:5173' })
   })
 
   it('registers a user and sets an httpOnly refresh cookie', async () => {
@@ -70,6 +70,18 @@ describe('auth API', () => {
     expect(refreshCookie).toContain(`${cookieName}=`)
     expect(refreshCookie).toContain('HttpOnly')
     expect(refreshCookie).toContain('SameSite=Lax')
+  })
+
+  it('allows frontend origin to receive auth cookies', async () => {
+    const response = await request(app)
+      .post('/api/auth/register')
+      .set('Origin', 'http://localhost:5173')
+      .send(registerPayload())
+      .expect(201)
+
+    expect(response.headers['access-control-allow-origin']).toBe('http://localhost:5173')
+    expect(response.headers['access-control-allow-credentials']).toBe('true')
+    expect(refreshCookieFrom(response)).toContain(`${cookieName}=`)
   })
 
   it('rejects duplicate register emails without creating another user', async () => {

@@ -87,7 +87,7 @@ describe('sync API', () => {
     process.env.REFRESH_TOKEN_COOKIE_SAME_SITE = 'lax'
 
     pool = await createTestPool()
-    app = createApp({ pool, allowedOrigins: '*' })
+    app = createApp({ pool, allowedOrigins: 'http://localhost:5173' })
   })
 
   it('pushes records and pulls changed rows since a cursor', async () => {

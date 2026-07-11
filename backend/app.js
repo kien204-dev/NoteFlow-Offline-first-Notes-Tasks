@@ -18,6 +18,7 @@ export const createApp = ({ pool, allowedOrigins } = {}) => {
         'http://127.0.0.1:5173',
         process.env.FRONTEND_ORIGIN,
       ].filter(Boolean),
+      credentials: true,
     }),
   )
   app.use(express.json({ limit: '1mb' }))
