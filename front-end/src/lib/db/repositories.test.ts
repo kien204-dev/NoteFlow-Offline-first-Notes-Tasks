@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import Dexie from 'dexie'
 import { createDatabase, type NoteFlowDatabase } from './schema'
 import * as notesRepo from './notesRepo'
 import * as tasksRepo from './tasksRepo'
@@ -77,6 +78,22 @@ describe('tasksRepo', () => {
     expect(updated.dirty).toBe(true)
   })
 
+  it('creates tasks with due date and priority defaults', async () => {
+    const task = await tasksRepo.create({
+      title: 'Prepare release',
+      dueDate: '2026-07-20',
+      priority: 'high',
+    }, database)
+
+    expect(task.dueDate).toBe('2026-07-20')
+    expect(task.priority).toBe('high')
+    expect(task.subtasks).toEqual([])
+
+    const defaultTask = await tasksRepo.create({ title: 'Default priority' }, database)
+    expect(defaultTask.priority).toBe('medium')
+    expect(defaultTask.subtasks).toEqual([])
+  })
+
   it('filters tasks by status, tags, and search text', async () => {
     await tasksRepo.create({
       title: 'Write sync tests',
@@ -94,5 +111,44 @@ describe('tasksRepo', () => {
     expect(await tasksRepo.list({ status: 'active' }, database)).toHaveLength(1)
     expect(await tasksRepo.list({ status: 'completed' }, database)).toHaveLength(1)
     expect(await tasksRepo.list({ tags: ['docs'], query: 'architecture' }, database)).toHaveLength(1)
+  })
+
+  it('upgrades old task records without losing data', async () => {
+    const databaseName = `noteflow-upgrade-${crypto.randomUUID()}`
+    const oldDatabase = new Dexie(databaseName)
+    oldDatabase.version(3).stores({
+      notes: '&id, updatedAt, deletedAt, dirty, baseVersion, *tags',
+      tasks: '&id, updatedAt, deletedAt, dirty, baseVersion, completed, dueDate, *tags',
+      syncMeta: '&key',
+      conflicts: '&id, entity, detectedAt',
+    })
+    await oldDatabase.table('tasks').add({
+      id: 'legacy-task',
+      title: 'Legacy task',
+      notes: 'kept',
+      dueDate: null,
+      completed: false,
+      tags: ['old'],
+      createdAt: 1_000,
+      updatedAt: 1_000,
+      deletedAt: null,
+      dirty: false,
+      baseVersion: null,
+    })
+    oldDatabase.close()
+
+    const upgraded = createDatabase(databaseName)
+    try {
+      const task = await upgraded.tasks.get('legacy-task')
+      expect(task).toMatchObject({
+        title: 'Legacy task',
+        notes: 'kept',
+        priority: 'medium',
+        subtasks: [],
+      })
+    } finally {
+      upgraded.close()
+      await upgraded.delete()
+    }
   })
 })

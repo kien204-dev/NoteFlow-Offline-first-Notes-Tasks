@@ -25,7 +25,9 @@ const mapTaskFromDb = (row) => {
     title: row.title,
     notes: row.notes ?? '',
     dueDate: toIso(row.due_date),
+    priority: row.priority ?? 'medium',
     completed: row.completed,
+    subtasks: normalizeArray(row.subtasks),
     tags: row.tags ?? [],
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt,
@@ -120,13 +122,15 @@ export const createSyncRepository = (pool) => {
 
     await pool.query(
       `
-        insert into tasks (id, user_id, title, notes, due_date, completed, tags, created_at, updated_at, deleted_at)
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        insert into tasks (id, user_id, title, notes, due_date, priority, completed, subtasks, tags, created_at, updated_at, deleted_at)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         on conflict (id) do update set
           title = excluded.title,
           notes = excluded.notes,
           due_date = excluded.due_date,
+          priority = excluded.priority,
           completed = excluded.completed,
+          subtasks = excluded.subtasks,
           tags = excluded.tags,
           created_at = excluded.created_at,
           updated_at = excluded.updated_at,
@@ -139,7 +143,9 @@ export const createSyncRepository = (pool) => {
         taskToSave.title,
         taskToSave.notes ?? '',
         toDate(taskToSave.dueDate),
+        taskToSave.priority ?? 'medium',
         Boolean(taskToSave.completed),
+        JSON.stringify(normalizeArray(taskToSave.subtasks)),
         normalizeArray(taskToSave.tags),
         toDate(taskToSave.createdAt),
         toDate(taskToSave.updatedAt),

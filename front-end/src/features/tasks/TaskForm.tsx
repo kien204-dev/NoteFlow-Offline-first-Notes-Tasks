@@ -20,6 +20,7 @@ export function TaskForm() {
   const [title, setTitle] = useState('')
   const [notes, setNotes] = useState('')
   const [dueDate, setDueDate] = useState('')
+  const [priority, setPriority] = useState<tasksRepo.TaskPriority>('medium')
   const [completed, setCompleted] = useState(false)
   const [tags, setTags] = useState('')
 
@@ -27,6 +28,7 @@ export function TaskForm() {
     setTitle(task?.title ?? '')
     setNotes(task?.notes ?? '')
     setDueDate(task?.dueDate ?? '')
+    setPriority(task?.priority ?? 'medium')
     setCompleted(task?.completed ?? false)
     setTags(task?.tags.join(', ') ?? '')
   }, [task])
@@ -40,6 +42,7 @@ export function TaskForm() {
       title,
       notes,
       dueDate: dueDate || null,
+      priority,
       completed,
       tags: splitTags(tags),
     }
@@ -97,6 +100,19 @@ export function TaskForm() {
             onChange={(event) => setDueDate(event.target.value)}
             className="mt-2 w-full rounded-sm border border-stone-300 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
           />
+        </label>
+
+        <label className="text-sm font-medium text-stone-700 dark:text-zinc-300">
+          Priority
+          <select
+            value={priority}
+            onChange={(event) => setPriority(event.target.value as tasksRepo.TaskPriority)}
+            className="mt-2 w-full rounded-sm border border-stone-300 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+          >
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
         </label>
 
         <label className="flex min-h-0 flex-1 flex-col text-sm font-medium text-stone-700 dark:text-zinc-300">

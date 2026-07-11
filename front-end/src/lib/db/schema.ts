@@ -17,7 +17,13 @@ export type TaskRecord = {
   title: string
   notes?: string
   dueDate: string | null
+  priority: 'low' | 'medium' | 'high'
   completed: boolean
+  subtasks: Array<{
+    id: string
+    title: string
+    completed: boolean
+  }>
   tags: string[]
   createdAt: number
   updatedAt: number
@@ -70,6 +76,24 @@ export class NoteFlowDatabase extends Dexie {
       syncMeta: '&key',
       conflicts: '&id, entity, detectedAt',
     })
+
+    this.version(4)
+      .stores({
+        notes: '&id, updatedAt, deletedAt, dirty, baseVersion, *tags',
+        tasks:
+          '&id, updatedAt, deletedAt, dirty, baseVersion, completed, dueDate, priority, *tags',
+        syncMeta: '&key',
+        conflicts: '&id, entity, detectedAt',
+      })
+      .upgrade(async (transaction) => {
+        await transaction
+          .table<TaskRecord, string>('tasks')
+          .toCollection()
+          .modify((task) => {
+            task.priority ??= 'medium'
+            task.subtasks ??= []
+          })
+      })
   }
 }
 

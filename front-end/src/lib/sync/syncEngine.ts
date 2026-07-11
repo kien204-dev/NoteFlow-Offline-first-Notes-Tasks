@@ -40,7 +40,9 @@ const taskToServer = (task: TaskRecord): ServerTask => ({
   title: task.title,
   notes: task.notes,
   dueDate: task.dueDate,
+  priority: task.priority,
   completed: task.completed,
+  subtasks: task.subtasks,
   tags: task.tags,
   createdAt: toIso(task.createdAt) ?? epoch,
   updatedAt: toIso(task.updatedAt) ?? epoch,
@@ -60,6 +62,8 @@ const noteFromServer = (note: ServerNote): NoteRecord => ({
 const taskFromServer = (task: ServerTask): TaskRecord => ({
   ...task,
   dueDate: toDateInputValue(task.dueDate),
+  priority: task.priority ?? 'medium',
+  subtasks: task.subtasks ?? [],
   createdAt: toTimestamp(task.createdAt) ?? 0,
   updatedAt: toTimestamp(task.updatedAt) ?? 0,
   deletedAt: toTimestamp(task.deletedAt),

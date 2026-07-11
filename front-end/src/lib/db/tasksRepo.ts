@@ -2,6 +2,7 @@ import { db, type NoteFlowDatabase, type TaskRecord } from './schema'
 import { matchesSearchText, matchesTags, normalizeTags, sortTags } from './filterUtils'
 
 export type TaskStatusFilter = 'all' | 'active' | 'completed'
+export type TaskPriority = TaskRecord['priority']
 
 export type TaskFilter = {
   query?: string
@@ -14,12 +15,14 @@ export type CreateTaskInput = {
   title: string
   notes?: string
   dueDate?: string | null
+  priority?: TaskPriority
   completed?: boolean
+  subtasks?: TaskRecord['subtasks']
   tags?: string[]
 }
 
 export type UpdateTaskInput = Partial<
-  Pick<TaskRecord, 'title' | 'notes' | 'dueDate' | 'completed' | 'tags'>
+  Pick<TaskRecord, 'title' | 'notes' | 'dueDate' | 'priority' | 'completed' | 'subtasks' | 'tags'>
 >
 
 const matchesStatus = (task: TaskRecord, status: TaskStatusFilter = 'all') => {
@@ -38,7 +41,9 @@ export const create = async (
     title: input.title.trim() || 'Untitled task',
     notes: input.notes?.trim() || '',
     dueDate: input.dueDate ?? null,
+    priority: input.priority ?? 'medium',
     completed: input.completed ?? false,
+    subtasks: input.subtasks ?? [],
     tags: normalizeTags(input.tags),
     createdAt: now,
     updatedAt: now,
@@ -64,6 +69,8 @@ export const update = async (
     ...input,
     title: input.title?.trim() || current.title,
     notes: input.notes?.trim() ?? current.notes,
+    priority: input.priority ?? current.priority,
+    subtasks: input.subtasks ?? current.subtasks,
     tags: input.tags ? normalizeTags(input.tags) : current.tags,
     updatedAt: Date.now(),
     dirty: true,

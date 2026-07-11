@@ -48,7 +48,9 @@ const taskPayload = (overrides = {}) => ({
   title: 'Local task',
   notes: 'Created offline',
   dueDate: null,
+  priority: 'medium',
   completed: false,
+  subtasks: [],
   tags: ['sync'],
   createdAt: '2026-07-09T00:00:00.000Z',
   updatedAt: '2026-07-09T00:01:00.000Z',
@@ -241,6 +243,39 @@ describe('sync API', () => {
 
     expect(response.body.notes).toEqual([])
     expect(response.body.tasks).toEqual([])
+  })
+
+  it('syncs task due date, priority, and subtasks', async () => {
+    const { accessToken } = await registerUser(app)
+    const task = taskPayload({
+      dueDate: '2026-07-20T00:00:00.000Z',
+      priority: 'high',
+      subtasks: [
+        { id: 'subtask-1', title: 'Draft checklist', completed: true },
+        { id: 'subtask-2', title: 'Review release notes', completed: false },
+      ],
+    })
+
+    await request(app)
+      .post('/api/sync/push')
+      .set('Authorization', authHeader(accessToken))
+      .send({ notes: [], tasks: [task] })
+      .expect(200)
+
+    const response = await request(app)
+      .get('/api/sync/pull')
+      .set('Authorization', authHeader(accessToken))
+      .query({ since: '2026-07-08T00:00:00.000Z' })
+      .expect(200)
+
+    expect(response.body.tasks).toMatchObject([
+      {
+        id: task.id,
+        dueDate: '2026-07-20T00:00:00.000Z',
+        priority: 'high',
+        subtasks: task.subtasks,
+      },
+    ])
   })
 
   it('ignores attempts to overwrite another user note or task by known id', async () => {

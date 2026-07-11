@@ -14,10 +14,31 @@ const formatDueDate = (dueDate: string | null) => {
   )
 }
 
+const isOverdue = (dueDate: string | null, completed: boolean) => {
+  if (!dueDate || completed) return false
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return new Date(`${dueDate}T00:00:00`).getTime() < today.getTime()
+}
+
+const priorityLabels: Record<TaskRecord['priority'], string> = {
+  low: 'Low priority',
+  medium: 'Medium priority',
+  high: 'High priority',
+}
+
+const priorityClasses: Record<TaskRecord['priority'], string> = {
+  low: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200',
+  medium: 'border-stone-200 bg-stone-50 text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
+  high: 'border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200',
+}
+
 export function TaskItem({ task, isSelected, onSelect }: TaskItemProps) {
   const toggleCompleted = async (event: React.ChangeEvent<HTMLInputElement>) => {
     await tasksRepo.update(task.id, { completed: event.target.checked })
   }
+  const overdue = isOverdue(task.dueDate, task.completed)
 
   return (
     <article
@@ -58,7 +79,18 @@ export function TaskItem({ task, isSelected, onSelect }: TaskItemProps) {
         </button>
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-stone-500 dark:text-zinc-400">
-        <span>{formatDueDate(task.dueDate)}</span>
+        <span
+          className={`rounded-sm border px-2 py-1 ${
+            overdue
+              ? 'border-orange-300 bg-orange-50 font-semibold text-orange-800 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-200'
+              : 'border-stone-200 bg-stone-50 dark:border-zinc-700 dark:bg-zinc-800'
+          }`}
+        >
+          {overdue ? `Overdue · ${formatDueDate(task.dueDate)}` : formatDueDate(task.dueDate)}
+        </span>
+        <span className={`rounded-sm border px-2 py-1 ${priorityClasses[task.priority]}`}>
+          {priorityLabels[task.priority]}
+        </span>
         {task.tags.map((tag) => (
           <span
             key={tag}
