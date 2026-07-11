@@ -22,6 +22,8 @@ export function TaskForm() {
   const [dueDate, setDueDate] = useState('')
   const [priority, setPriority] = useState<tasksRepo.TaskPriority>('medium')
   const [completed, setCompleted] = useState(false)
+  const [subtasks, setSubtasks] = useState<tasksRepo.TaskSubtask[]>([])
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
   const [tags, setTags] = useState('')
 
   useEffect(() => {
@@ -30,6 +32,8 @@ export function TaskForm() {
     setDueDate(task?.dueDate ?? '')
     setPriority(task?.priority ?? 'medium')
     setCompleted(task?.completed ?? false)
+    setSubtasks(task?.subtasks ?? [])
+    setNewSubtaskTitle('')
     setTags(task?.tags.join(', ') ?? '')
   }, [task])
 
@@ -44,6 +48,7 @@ export function TaskForm() {
       dueDate: dueDate || null,
       priority,
       completed,
+      subtasks,
       tags: splitTags(tags),
     }
 
@@ -59,6 +64,29 @@ export function TaskForm() {
     if (!editingTaskId) return
     await tasksRepo.softDelete(editingTaskId)
     closeEditor()
+  }
+
+  const addSubtask = () => {
+    const title = newSubtaskTitle.trim()
+    if (!title) return
+
+    setSubtasks((currentSubtasks) => [
+      ...currentSubtasks,
+      { id: crypto.randomUUID(), title, completed: false },
+    ])
+    setNewSubtaskTitle('')
+  }
+
+  const toggleSubtask = (id: string, completed: boolean) => {
+    setSubtasks((currentSubtasks) =>
+      currentSubtasks.map((subtask) =>
+        subtask.id === id ? { ...subtask, completed } : subtask,
+      ),
+    )
+  }
+
+  const removeSubtask = (id: string) => {
+    setSubtasks((currentSubtasks) => currentSubtasks.filter((subtask) => subtask.id !== id))
   }
 
   return (
@@ -134,6 +162,70 @@ export function TaskForm() {
             placeholder="portfolio, frontend"
           />
         </label>
+
+        <fieldset className="rounded-sm border border-stone-200 p-3 dark:border-zinc-800">
+          <legend className="px-1 text-sm font-medium text-stone-700 dark:text-zinc-300">
+            Subtasks
+          </legend>
+          <div className="mt-2 flex gap-2">
+            <label className="sr-only" htmlFor="new-subtask-title">
+              New subtask title
+            </label>
+            <input
+              id="new-subtask-title"
+              value={newSubtaskTitle}
+              onChange={(event) => setNewSubtaskTitle(event.target.value)}
+              className="min-w-0 flex-1 rounded-sm border border-stone-300 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+              placeholder="Add checklist item"
+            />
+            <button
+              type="button"
+              onClick={addSubtask}
+              className="rounded-sm border border-stone-300 px-3 py-2 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink dark:border-zinc-700"
+            >
+              Add
+            </button>
+          </div>
+
+          {subtasks.length ? (
+            <div className="mt-3 grid gap-2">
+              {subtasks.map((subtask) => (
+                <div
+                  key={subtask.id}
+                  className="flex items-center gap-2 rounded-sm border border-stone-200 bg-stone-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950"
+                >
+                  <input
+                    id={`subtask-${subtask.id}`}
+                    type="checkbox"
+                    checked={subtask.completed}
+                    onChange={(event) => toggleSubtask(subtask.id, event.target.checked)}
+                    className="h-4 w-4 accent-stone-900"
+                  />
+                  <label
+                    htmlFor={`subtask-${subtask.id}`}
+                    className={`min-w-0 flex-1 text-sm ${
+                      subtask.completed ? 'line-through decoration-stone-400' : ''
+                    }`}
+                  >
+                    {subtask.title}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => removeSubtask(subtask.id)}
+                    className="rounded-sm border border-red-200 px-2 py-1 text-xs font-medium text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 dark:border-red-900 dark:text-red-300"
+                    aria-label={`Remove subtask ${subtask.title}`}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-stone-500 dark:text-zinc-400">
+              No subtasks yet.
+            </p>
+          )}
+        </fieldset>
 
         <label className="flex items-center gap-2 text-sm font-medium text-stone-700 dark:text-zinc-300">
           <input

@@ -3,6 +3,7 @@ import { matchesSearchText, matchesTags, normalizeTags, sortTags } from './filte
 
 export type TaskStatusFilter = 'all' | 'active' | 'completed'
 export type TaskPriority = TaskRecord['priority']
+export type TaskSubtask = TaskRecord['subtasks'][number]
 
 export type TaskFilter = {
   query?: string

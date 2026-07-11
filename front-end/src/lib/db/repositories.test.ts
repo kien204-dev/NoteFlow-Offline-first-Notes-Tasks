@@ -94,6 +94,22 @@ describe('tasksRepo', () => {
     expect(defaultTask.subtasks).toEqual([])
   })
 
+  it('creates and updates task subtasks', async () => {
+    const task = await tasksRepo.create({
+      title: 'Checklist task',
+      subtasks: [{ id: 'subtask-1', title: 'Draft', completed: false }],
+    }, database)
+
+    expect(task.subtasks).toEqual([{ id: 'subtask-1', title: 'Draft', completed: false }])
+
+    const updated = await tasksRepo.update(task.id, {
+      subtasks: [{ id: 'subtask-1', title: 'Draft', completed: true }],
+    }, database)
+
+    expect(updated.subtasks).toEqual([{ id: 'subtask-1', title: 'Draft', completed: true }])
+    expect(updated.dirty).toBe(true)
+  })
+
   it('filters tasks by status, tags, and search text', async () => {
     await tasksRepo.create({
       title: 'Write sync tests',

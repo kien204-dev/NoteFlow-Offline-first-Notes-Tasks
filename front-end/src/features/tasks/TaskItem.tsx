@@ -39,6 +39,7 @@ export function TaskItem({ task, isSelected, onSelect }: TaskItemProps) {
     await tasksRepo.update(task.id, { completed: event.target.checked })
   }
   const overdue = isOverdue(task.dueDate, task.completed)
+  const completedSubtasks = task.subtasks.filter((subtask) => subtask.completed).length
 
   return (
     <article
@@ -78,6 +79,21 @@ export function TaskItem({ task, isSelected, onSelect }: TaskItemProps) {
           </p>
         </button>
       </div>
+      {task.subtasks.length ? (
+        <div className="mt-3" aria-label={`${completedSubtasks}/${task.subtasks.length} subtasks completed`}>
+          <div className="flex items-center justify-between text-xs text-stone-500 dark:text-zinc-400">
+            <span>
+              {completedSubtasks}/{task.subtasks.length} completed
+            </span>
+          </div>
+          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-stone-200 dark:bg-zinc-800">
+            <div
+              className="h-full bg-amber-500"
+              style={{ width: `${(completedSubtasks / task.subtasks.length) * 100}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
       <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-stone-500 dark:text-zinc-400">
         <span
           className={`rounded-sm border px-2 py-1 ${
