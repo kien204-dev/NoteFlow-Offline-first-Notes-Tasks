@@ -61,6 +61,16 @@ describe('LogoutControl', () => {
     expect(api.logout).not.toHaveBeenCalled()
     expect(await database.notes.count()).toBe(1)
 
+    await userEvent.keyboard('{Escape}')
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Confirm logout' })).not.toBeInTheDocument()
+    })
+    expect(api.logout).not.toHaveBeenCalled()
+    expect(await database.notes.count()).toBe(1)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Logout' }))
+    expect(await screen.findByRole('dialog', { name: 'Confirm logout' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Logout and delete local data' }))
 
     await waitFor(() => {

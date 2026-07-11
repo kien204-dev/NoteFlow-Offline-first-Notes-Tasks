@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { db } from '../../lib/db/schema'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { ConflictRecord } from '../../lib/db/schema'
 import type { ServerNote } from '../../lib/sync/types'
 import { ConflictResolver } from './ConflictResolver'
 
@@ -25,26 +25,22 @@ const note = (overrides: Partial<ServerNote> = {}): ServerNote => ({
   ...overrides,
 })
 
-beforeEach(async () => {
-  await db.conflicts.clear()
-  await db.conflicts.put({
-    id: 'note:00000000-0000-4000-8000-000000000001',
-    entity: 'note',
-    localVersion: note(),
-    serverVersion: note({ title: 'Server note', content: 'Server body' }),
-    detectedAt: 3_000,
-  })
+const conflict = (): ConflictRecord => ({
+  id: 'note:00000000-0000-4000-8000-000000000001',
+  entity: 'note',
+  localVersion: note(),
+  serverVersion: note({ title: 'Server note', content: 'Server body' }),
+  detectedAt: 3_000,
 })
 
 afterEach(async () => {
   vi.clearAllMocks()
-  await db.conflicts.clear()
 })
 
 describe('ConflictResolver', () => {
   it('lets the user keep the local note', async () => {
     const user = userEvent.setup()
-    render(<ConflictResolver onClose={vi.fn()} />)
+    render(<ConflictResolver conflictsOverride={[conflict()]} onClose={vi.fn()} />)
 
     await user.click(await screen.findByRole('button', { name: 'Keep my version' }))
 
@@ -55,7 +51,7 @@ describe('ConflictResolver', () => {
 
   it('lets the user keep the server note', async () => {
     const user = userEvent.setup()
-    render(<ConflictResolver onClose={vi.fn()} />)
+    render(<ConflictResolver conflictsOverride={[conflict()]} onClose={vi.fn()} />)
 
     await user.click(await screen.findByRole('button', { name: 'Keep server version' }))
 
@@ -66,7 +62,7 @@ describe('ConflictResolver', () => {
 
   it('lets the user save a manual merge', async () => {
     const user = userEvent.setup()
-    render(<ConflictResolver onClose={vi.fn()} />)
+    render(<ConflictResolver conflictsOverride={[conflict()]} onClose={vi.fn()} />)
 
     await user.click(await screen.findByRole('button', { name: 'Edit manually' }))
     await user.clear(screen.getByLabelText('Title'))
@@ -82,7 +78,7 @@ describe('ConflictResolver', () => {
   it('focuses inside the dialog and closes on Escape', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
-    render(<ConflictResolver onClose={onClose} />)
+    render(<ConflictResolver conflictsOverride={[conflict()]} onClose={onClose} />)
 
     expect(await screen.findByRole('button', { name: 'Close' })).toHaveFocus()
 

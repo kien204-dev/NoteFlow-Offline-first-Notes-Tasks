@@ -65,6 +65,9 @@ describe('auth API', () => {
 
     expect(response.body.accessToken).toEqual(expect.any(String))
     expect(response.body.user).toMatchObject({ email: 'ada@example.com' })
+    expect(response.body.user).not.toHaveProperty('password')
+    expect(response.body.user).not.toHaveProperty('password_hash')
+    expect(response.body.user).not.toHaveProperty('passwordHash')
 
     const refreshCookie = refreshCookieFrom(response)
     expect(refreshCookie).toContain(`${cookieName}=`)
@@ -116,6 +119,9 @@ describe('auth API', () => {
       .expect(200)
 
     expect(response.body.accessToken).toEqual(expect.any(String))
+    expect(response.body.user).not.toHaveProperty('password')
+    expect(response.body.user).not.toHaveProperty('password_hash')
+    expect(response.body.user).not.toHaveProperty('passwordHash')
     expect(refreshCookieFrom(response)).toContain(`${cookieName}=`)
   })
 

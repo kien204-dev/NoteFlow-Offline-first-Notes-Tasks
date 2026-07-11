@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../lib/db/schema'
+import { db, type ConflictRecord, type NoteFlowDatabase } from '../../lib/db/schema'
 import {
   keepLocalNoteConflict,
   keepServerNoteConflict,
@@ -10,6 +10,8 @@ import type { ServerNote } from '../../lib/sync/types'
 
 type ConflictResolverProps = {
   onClose: () => void
+  database?: NoteFlowDatabase
+  conflictsOverride?: ConflictRecord[]
 }
 
 const splitTags = (value: string) =>
@@ -18,15 +20,20 @@ const splitTags = (value: string) =>
     .map((tag) => tag.trim())
     .filter(Boolean)
 
-export function ConflictResolver({ onClose }: ConflictResolverProps) {
+export function ConflictResolver({
+  onClose,
+  database = db,
+  conflictsOverride,
+}: ConflictResolverProps) {
   const dialogRef = useRef<HTMLElement | null>(null)
   const closeButtonRef = useRef<HTMLButtonElement | null>(null)
   const previouslyFocusedElement = useRef<HTMLElement | null>(null)
-  const conflicts = useLiveQuery(
-    () => db.conflicts.where('entity').equals('note').sortBy('detectedAt'),
-    [],
+  const liveConflicts = useLiveQuery(
+    () => database.conflicts.where('entity').equals('note').sortBy('detectedAt'),
+    [database],
     [],
   )
+  const conflicts = conflictsOverride ?? liveConflicts
   const [editingConflictId, setEditingConflictId] = useState<string | null>(null)
   const editingConflict = conflicts.find((conflict) => conflict.id === editingConflictId)
   const localNote = editingConflict?.localVersion as ServerNote | undefined
