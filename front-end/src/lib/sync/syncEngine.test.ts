@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as notesRepo from '../db/notesRepo'
 import { createDatabase, type NoteFlowDatabase } from '../db/schema'
+import { useAuthStore } from '../../features/auth/authStore'
 import { useSyncStatusStore } from './statusStore'
 import { runSync } from './syncEngine'
 import type { PullResponse, PushResponse } from './types'
@@ -26,16 +27,31 @@ const pullResponse = (body: Partial<PullResponse> = {}): PullResponse => ({
 
 beforeEach(() => {
   database = createDatabase(`noteflow-sync-test-${crypto.randomUUID()}`)
+  useAuthStore.getState().setAuth({
+    accessToken: 'access-token',
+    user: { id: 'user-1', email: 'ada@example.com' },
+  })
   useSyncStatusStore.setState({ status: 'idle', lastSyncedAt: null, error: null })
 })
 
 afterEach(async () => {
   vi.restoreAllMocks()
+  useAuthStore.getState().clearAuth()
   database.close()
   await database.delete()
 })
 
 describe('runSync', () => {
+  it('skips sync when there is no access token', async () => {
+    useAuthStore.getState().clearAuth()
+    const fetcher = vi.fn()
+
+    const result = await runSync({ database, fetcher, isOnline: () => true })
+
+    expect(result).toEqual({ skipped: 'unauthenticated' })
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
   it('clears dirty after a successful push', async () => {
     const note = await notesRepo.create({ title: 'Push me', content: '' }, database)
     const fetcher = vi
@@ -46,6 +62,9 @@ describe('runSync', () => {
     await runSync({ database, fetcher, isOnline: () => true })
 
     expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(fetcher.mock.calls[0][1]?.headers).toMatchObject({
+      Authorization: 'Bearer access-token',
+    })
     expect((await database.notes.get(note.id))?.dirty).toBe(false)
     expect(useSyncStatusStore.getState().status).toBe('synced')
   })
@@ -177,5 +196,60 @@ describe('runSync', () => {
     expect(await database.conflicts.get(`note:${note.id}`)).toMatchObject({
       entity: 'note',
     })
+  })
+
+  it('refreshes an expired access token and retries the sync request', async () => {
+    const note = await notesRepo.create({ title: 'Refresh me', content: '' }, database)
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ code: 'token_expired', error: 'access token expired' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ accessToken: 'fresh-token' }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      )
+      .mockResolvedValueOnce(jsonResponse(pushResponse([note.id])))
+      .mockResolvedValueOnce(jsonResponse(pullResponse()))
+
+    await runSync({ database, fetcher, isOnline: () => true })
+
+    expect(fetcher).toHaveBeenCalledTimes(4)
+    expect(fetcher.mock.calls[2][1]?.headers).toMatchObject({
+      Authorization: 'Bearer fresh-token',
+    })
+    expect(useAuthStore.getState().accessToken).toBe('fresh-token')
+    expect((await database.notes.get(note.id))?.dirty).toBe(false)
+  })
+
+  it('clears auth on invalid token without deleting Dexie data', async () => {
+    const note = await notesRepo.create({ title: 'Keep local', content: '' }, database)
+    const fetcher = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ code: 'invalid_token', error: 'invalid access token' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    await runSync({ database, fetcher, isOnline: () => true })
+
+    expect(useAuthStore.getState().isAuthenticated).toBe(false)
+    expect(await database.notes.get(note.id)).toBeDefined()
+  })
+
+  it('does not refresh, clear auth, or delete data while offline', async () => {
+    const note = await notesRepo.create({ title: 'Offline expired', content: '' }, database)
+    const fetcher = vi.fn()
+
+    await runSync({ database, fetcher, isOnline: () => false })
+
+    expect(fetcher).not.toHaveBeenCalled()
+    expect(useAuthStore.getState().isAuthenticated).toBe(true)
+    expect(await database.notes.get(note.id)).toBeDefined()
   })
 })

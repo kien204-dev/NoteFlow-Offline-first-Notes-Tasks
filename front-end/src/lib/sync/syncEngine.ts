@@ -5,6 +5,9 @@ import {
   type NoteRecord,
   type TaskRecord,
 } from '../db/schema'
+import { createAuthApi } from '../../features/auth/authApi'
+import { useAuthStore } from '../../features/auth/authStore'
+import { navigateTo } from '../../features/auth/navigation'
 import { useSyncStatusStore } from './statusStore'
 import { createSyncApi, type SyncApiOptions } from './syncApi'
 import type { ServerNote, ServerTask } from './types'
@@ -161,7 +164,33 @@ export const runSync = async ({
     return { skipped: 'offline' as const }
   }
 
-  const api = createSyncApi(apiOptions)
+  const authState = useAuthStore.getState()
+  if (!authState.accessToken || !authState.user) {
+    setStatus({ status: 'idle', error: null })
+    return { skipped: 'unauthenticated' as const }
+  }
+
+  const api = createSyncApi({
+    ...apiOptions,
+    accessToken: authState.accessToken,
+    isOnline,
+    onTokenRefresh: ({ accessToken }) => {
+      const currentUser = useAuthStore.getState().user
+      if (currentUser) {
+        useAuthStore.getState().setAuth({ accessToken, user: currentUser })
+      }
+    },
+    onAuthLost: () => {
+      useAuthStore.getState().clearAuth()
+      navigateTo('/login')
+    },
+    refreshAccessToken: async () => {
+      const currentUser = useAuthStore.getState().user
+      if (!currentUser) throw new Error('User session is missing')
+      const refreshResponse = await createAuthApi(apiOptions).refresh()
+      return { accessToken: refreshResponse.accessToken, user: currentUser }
+    },
+  })
 
   try {
     setStatus({ status: 'syncing', error: null })
