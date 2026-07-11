@@ -36,7 +36,7 @@ export const useNotesUiStore = create<NotesUiState>((set) => ({
 export const useNotesView = () => {
   const query = useNotesUiStore((state) => state.query)
   const selectedTags = useNotesUiStore((state) => state.selectedTags)
-  const debouncedQuery = useDebouncedValue(query, 250)
+  const debouncedQuery = useDebouncedValue(query, 300)
   const selectedTagKey = selectedTags.join('|')
 
   const notes = useLiveQuery(

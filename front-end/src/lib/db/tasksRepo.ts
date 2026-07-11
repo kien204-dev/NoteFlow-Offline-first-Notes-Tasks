@@ -1,5 +1,5 @@
 import { db, type NoteFlowDatabase, type TaskRecord } from './schema'
-import { matchesTags, normalizeTags, sortTags } from './filterUtils'
+import { matchesSearchText, matchesTags, normalizeTags, sortTags } from './filterUtils'
 
 export type TaskStatusFilter = 'all' | 'active' | 'completed'
 
@@ -26,13 +26,6 @@ const matchesStatus = (task: TaskRecord, status: TaskStatusFilter = 'all') => {
   if (status === 'active') return !task.completed
   if (status === 'completed') return task.completed
   return true
-}
-
-const matchesQuery = (task: TaskRecord, query = '') => {
-  const normalizedQuery = query.trim().toLowerCase()
-  if (!normalizedQuery) return true
-
-  return `${task.title} ${task.notes ?? ''}`.toLowerCase().includes(normalizedQuery)
 }
 
 export const create = async (
@@ -118,7 +111,7 @@ export const list = async (
       (filter.includeDeleted || task.deletedAt === null) &&
       matchesTags(task.tags, filter.tags) &&
       matchesStatus(task, filter.status) &&
-      matchesQuery(task, filter.query),
+      matchesSearchText(filter.query, [task.title, task.notes ?? '']),
   )
 }
 

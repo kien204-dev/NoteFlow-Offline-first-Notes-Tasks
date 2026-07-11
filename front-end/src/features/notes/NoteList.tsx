@@ -33,10 +33,16 @@ export function NoteList() {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            aria-describedby="note-search-results"
             className="mt-2 w-full rounded-sm border border-stone-300 bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-ink dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
             placeholder="Title or content"
           />
         </label>
+        <p id="note-search-results" className="sr-only" aria-live="polite">
+          {isLoading
+            ? 'Loading notes'
+            : `${visibleNotes.length} note${visibleNotes.length === 1 ? '' : 's'} shown`}
+        </p>
 
         {tags.length ? (
           <div className="flex flex-wrap gap-2" aria-label="Note tag filters">
@@ -73,11 +79,18 @@ export function NoteList() {
               note={note}
               isSelected={editingNoteId === note.id}
               onSelect={openEditor}
+              searchQuery={query}
             />
           ))
         ) : (
           <EmptyState
-            title={query || selectedTags.length ? 'No notes match this view' : 'No notes yet'}
+            title={
+              query
+                ? 'No notes match your search'
+                : selectedTags.length
+                  ? 'No notes match this tag filter'
+                  : 'No notes yet'
+            }
             description={
               query || selectedTags.length
                 ? 'Try a different search or clear the selected tags.'

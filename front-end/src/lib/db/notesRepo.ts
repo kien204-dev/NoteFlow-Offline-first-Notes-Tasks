@@ -1,5 +1,5 @@
 import { db, type NoteFlowDatabase, type NoteRecord } from './schema'
-import { matchesTags, normalizeTags, sortTags } from './filterUtils'
+import { matchesSearchText, matchesTags, normalizeTags, sortTags } from './filterUtils'
 
 export type NoteFilter = {
   query?: string
@@ -14,13 +14,6 @@ export type CreateNoteInput = {
 }
 
 export type UpdateNoteInput = Partial<Pick<NoteRecord, 'title' | 'content' | 'tags'>>
-
-const matchesQuery = (note: NoteRecord, query = '') => {
-  const normalizedQuery = query.trim().toLowerCase()
-  if (!normalizedQuery) return true
-
-  return `${note.title} ${note.content}`.toLowerCase().includes(normalizedQuery)
-}
 
 export const create = async (
   input: CreateNoteInput,
@@ -101,7 +94,7 @@ export const list = async (
     (note) =>
       (filter.includeDeleted || note.deletedAt === null) &&
       matchesTags(note.tags, filter.tags) &&
-      matchesQuery(note, filter.query),
+      matchesSearchText(filter.query, [note.title, note.content]),
   )
 }
 
