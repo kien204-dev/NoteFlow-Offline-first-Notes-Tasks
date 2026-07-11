@@ -69,3 +69,5 @@ export const createAuthApi = ({
       }),
   }
 }
+
+export type AuthApi = ReturnType<typeof createAuthApi>

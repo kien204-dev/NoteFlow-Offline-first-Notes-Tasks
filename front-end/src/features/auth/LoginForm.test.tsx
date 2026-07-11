@@ -2,11 +2,19 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { LoginForm } from './LoginForm'
+import type { AuthApi } from './authApi'
 
 const authResponse = {
   accessToken: 'access-token',
   user: { id: 'user-1', email: 'ada@example.com' },
 }
+
+const authApi = (login: ReturnType<typeof vi.fn>) => ({
+  login,
+  register: vi.fn(),
+  refresh: vi.fn(),
+  logout: vi.fn(),
+}) as unknown as AuthApi
 
 describe('LoginForm', () => {
   it('submits valid login credentials', async () => {
@@ -14,7 +22,7 @@ describe('LoginForm', () => {
     const login = vi.fn().mockResolvedValue(authResponse)
     const onSuccess = vi.fn()
 
-    render(<LoginForm authApi={{ login, register: vi.fn() }} onSuccess={onSuccess} />)
+    render(<LoginForm authApi={authApi(login)} onSuccess={onSuccess} />)
 
     await user.type(screen.getByLabelText('Email'), 'ada@example.com')
     await user.type(screen.getByLabelText('Password'), 'correct-password')
@@ -34,7 +42,7 @@ describe('LoginForm', () => {
     const user = userEvent.setup()
     const login = vi.fn()
 
-    render(<LoginForm authApi={{ login, register: vi.fn() }} />)
+    render(<LoginForm authApi={authApi(login)} />)
 
     await user.type(screen.getByLabelText('Email'), 'not-an-email')
     await user.type(screen.getByLabelText('Password'), 'short')
@@ -48,7 +56,7 @@ describe('LoginForm', () => {
     const user = userEvent.setup()
     const login = vi.fn().mockRejectedValue(new Error('invalid credentials'))
 
-    render(<LoginForm authApi={{ login, register: vi.fn() }} />)
+    render(<LoginForm authApi={authApi(login)} />)
 
     await user.type(screen.getByLabelText('Email'), 'ada@example.com')
     await user.type(screen.getByLabelText('Password'), 'correct-password')

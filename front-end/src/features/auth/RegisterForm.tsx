@@ -1,10 +1,10 @@
 import { useId, useState } from 'react'
-import { createAuthApi, type AuthResponse } from './authApi'
+import { createAuthApi, type AuthApi, type AuthResponse } from './authApi'
 import { validateAuthInput } from './validation'
 
 type RegisterFormProps = {
   onSuccess?: (response: AuthResponse) => void
-  authApi?: ReturnType<typeof createAuthApi>
+  authApi?: AuthApi
 }
 
 export function RegisterForm({ onSuccess, authApi = createAuthApi() }: RegisterFormProps) {
