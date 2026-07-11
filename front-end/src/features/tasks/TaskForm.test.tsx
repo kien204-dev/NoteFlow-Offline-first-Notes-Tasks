@@ -12,6 +12,8 @@ beforeEach(async () => {
     query: '',
     selectedTags: [],
     status: 'all',
+    priority: 'all',
+    sortBy: 'updated',
     editingTaskId: null,
     isEditorOpen: false,
   })

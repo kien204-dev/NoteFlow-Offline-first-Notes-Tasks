@@ -4,11 +4,15 @@ import { matchesSearchText, matchesTags, normalizeTags, sortTags } from './filte
 export type TaskStatusFilter = 'all' | 'active' | 'completed'
 export type TaskPriority = TaskRecord['priority']
 export type TaskSubtask = TaskRecord['subtasks'][number]
+export type TaskPriorityFilter = 'all' | TaskPriority
+export type TaskSort = 'updated' | 'dueDate' | 'priority'
 
 export type TaskFilter = {
   query?: string
   tags?: string[]
   status?: TaskStatusFilter
+  priority?: TaskPriorityFilter
+  sortBy?: TaskSort
   includeDeleted?: boolean
 }
 
@@ -30,6 +34,38 @@ const matchesStatus = (task: TaskRecord, status: TaskStatusFilter = 'all') => {
   if (status === 'active') return !task.completed
   if (status === 'completed') return task.completed
   return true
+}
+
+const matchesPriority = (task: TaskRecord, priority: TaskPriorityFilter = 'all') =>
+  priority === 'all' || task.priority === priority
+
+const priorityRank: Record<TaskPriority, number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+}
+
+const sortTasks = (tasks: TaskRecord[], sortBy: TaskSort = 'updated') => {
+  const sorted = [...tasks]
+
+  if (sortBy === 'dueDate') {
+    return sorted.sort((left, right) => {
+      if (!left.dueDate && !right.dueDate) return right.updatedAt - left.updatedAt
+      if (!left.dueDate) return 1
+      if (!right.dueDate) return -1
+      return left.dueDate.localeCompare(right.dueDate) || right.updatedAt - left.updatedAt
+    })
+  }
+
+  if (sortBy === 'priority') {
+    return sorted.sort(
+      (left, right) =>
+        priorityRank[left.priority] - priorityRank[right.priority] ||
+        right.updatedAt - left.updatedAt,
+    )
+  }
+
+  return sorted.sort((left, right) => right.updatedAt - left.updatedAt)
 }
 
 export const create = async (
@@ -112,15 +148,17 @@ export const list = async (
   filter: TaskFilter = {},
   database: NoteFlowDatabase = db,
 ): Promise<TaskRecord[]> => {
-  const tasks = await database.tasks.orderBy('updatedAt').reverse().toArray()
-
-  return tasks.filter(
+  const tasks = await database.tasks.toArray()
+  const filteredTasks = tasks.filter(
     (task) =>
       (filter.includeDeleted || task.deletedAt === null) &&
       matchesTags(task.tags, filter.tags) &&
       matchesStatus(task, filter.status) &&
+      matchesPriority(task, filter.priority) &&
       matchesSearchText(filter.query, [task.title, task.notes ?? '']),
   )
+
+  return sortTasks(filteredTasks, filter.sortBy)
 }
 
 export const search = (query: string, database: NoteFlowDatabase = db) =>

@@ -8,10 +8,25 @@ const statuses = [
   { label: 'Done', value: 'completed' },
 ] as const
 
+const priorities = [
+  { label: 'Any priority', value: 'all' },
+  { label: 'High', value: 'high' },
+  { label: 'Medium', value: 'medium' },
+  { label: 'Low', value: 'low' },
+] as const
+
+const sortOptions = [
+  { label: 'Updated', value: 'updated' },
+  { label: 'Due date', value: 'dueDate' },
+  { label: 'Priority', value: 'priority' },
+] as const
+
 export function TaskList() {
-  const { tasks, tags, query, selectedTags, status } = useTasksView()
+  const { tasks, tags, query, selectedTags, status, priority, sortBy } = useTasksView()
   const setQuery = useTasksUiStore((state) => state.setQuery)
   const setStatus = useTasksUiStore((state) => state.setStatus)
+  const setPriority = useTasksUiStore((state) => state.setPriority)
+  const setSortBy = useTasksUiStore((state) => state.setSortBy)
   const toggleTag = useTasksUiStore((state) => state.toggleTag)
   const clearTags = useTasksUiStore((state) => state.clearTags)
   const editingTaskId = useTasksUiStore((state) => state.editingTaskId)
@@ -62,6 +77,42 @@ export function TaskList() {
           ))}
         </div>
 
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-sm font-medium text-stone-700 dark:text-zinc-300">
+            Priority filter
+            <select
+              value={priority}
+              onChange={(event) =>
+                setPriority(event.target.value as (typeof priorities)[number]['value'])
+              }
+              className="mt-2 w-full rounded-sm border border-stone-300 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            >
+              {priorities.map((priorityOption) => (
+                <option key={priorityOption.value} value={priorityOption.value}>
+                  {priorityOption.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-sm font-medium text-stone-700 dark:text-zinc-300">
+            Sort tasks
+            <select
+              value={sortBy}
+              onChange={(event) =>
+                setSortBy(event.target.value as (typeof sortOptions)[number]['value'])
+              }
+              className="mt-2 w-full rounded-sm border border-stone-300 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-ink dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            >
+              {sortOptions.map((sortOption) => (
+                <option key={sortOption.value} value={sortOption.value}>
+                  {sortOption.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
         {tags.length ? (
           <div className="flex flex-wrap gap-2" aria-label="Task tag filters">
             {tags.map((tag) => (
@@ -101,10 +152,14 @@ export function TaskList() {
           ))
         ) : (
           <EmptyState
-            title={query || selectedTags.length || status !== 'all' ? 'No tasks match this view' : 'No tasks yet'}
+            title={
+              query || selectedTags.length || status !== 'all' || priority !== 'all'
+                ? 'No tasks match this view'
+                : 'No tasks yet'
+            }
             description={
-              query || selectedTags.length || status !== 'all'
-                ? 'Adjust the search, tags, or status filter to widen the list.'
+              query || selectedTags.length || status !== 'all' || priority !== 'all'
+                ? 'Adjust the search, tags, status, or priority filter to widen the list.'
                 : 'Add the next concrete step and it will save locally first.'
             }
             actionLabel="Create first task"

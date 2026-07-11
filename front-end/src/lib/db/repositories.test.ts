@@ -129,6 +129,41 @@ describe('tasksRepo', () => {
     expect(await tasksRepo.list({ tags: ['docs'], query: 'architecture' }, database)).toHaveLength(1)
   })
 
+  it('filters by priority and sorts by due date or priority', async () => {
+    const nowSpy = vi.spyOn(Date, 'now')
+    nowSpy.mockReturnValueOnce(1_000)
+    await tasksRepo.create({
+      title: 'Low later',
+      dueDate: '2026-07-30',
+      priority: 'low',
+    }, database)
+    nowSpy.mockReturnValueOnce(2_000)
+    await tasksRepo.create({
+      title: 'High sooner',
+      dueDate: '2026-07-12',
+      priority: 'high',
+    }, database)
+    nowSpy.mockReturnValueOnce(3_000)
+    await tasksRepo.create({
+      title: 'Medium no date',
+      priority: 'medium',
+    }, database)
+
+    expect((await tasksRepo.list({ priority: 'high' }, database)).map((task) => task.title)).toEqual([
+      'High sooner',
+    ])
+    expect((await tasksRepo.list({ sortBy: 'dueDate' }, database)).map((task) => task.title)).toEqual([
+      'High sooner',
+      'Low later',
+      'Medium no date',
+    ])
+    expect((await tasksRepo.list({ sortBy: 'priority' }, database)).map((task) => task.title)).toEqual([
+      'High sooner',
+      'Medium no date',
+      'Low later',
+    ])
+  })
+
   it('upgrades old task records without losing data', async () => {
     const databaseName = `noteflow-upgrade-${crypto.randomUUID()}`
     const oldDatabase = new Dexie(databaseName)
