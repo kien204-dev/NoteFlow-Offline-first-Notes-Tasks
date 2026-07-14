@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useAuthStore } from '../../features/auth/authStore'
 import { runSync } from './syncEngine'
 import { createSyncEventStream } from './syncEventStream'
+import { useSyncStatusStore } from './statusStore'
 
 type SyncRegistration = ServiceWorkerRegistration & {
   sync?: {
@@ -34,8 +35,13 @@ export const useSyncController = () => {
   }, [])
 
   useEffect(() => {
-    if (!accessToken) return undefined
+    const setStatus = useSyncStatusStore.getState().setStatus
+    if (!accessToken) {
+      setStatus({ connection: 'disconnected' })
+      return undefined
+    }
 
+    setStatus({ connection: navigator.onLine ? 'connecting' : 'fallback' })
     void triggerSync()
     void registerBackgroundSync().catch(() => {
       // Safari/iOS and Firefox do not support Background Sync; online events
@@ -46,11 +52,21 @@ export const useSyncController = () => {
       accessToken,
       clientId: clientIdRef.current,
       onChange: () => void triggerSync(),
-      onAuthError: () => void triggerSync(),
+      onConnected: () => setStatus({ connection: 'connected' }),
+      onDisconnected: () => setStatus({ connection: 'fallback' }),
+      onAuthError: () => {
+        setStatus({ connection: 'fallback' })
+        void triggerSync()
+      },
     })
 
     const handleOnline = () => {
+      setStatus({ connection: 'connecting' })
       stream.restart()
+      void triggerSync()
+    }
+    const handleOffline = () => {
+      setStatus({ connection: 'fallback' })
       void triggerSync()
     }
     const handleVisibilityChange = () => {
@@ -65,6 +81,7 @@ export const useSyncController = () => {
     }
 
     window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
     document.addEventListener('visibilitychange', handleVisibilityChange)
     navigator.serviceWorker?.addEventListener('message', handleServiceWorkerMessage)
 
@@ -74,7 +91,9 @@ export const useSyncController = () => {
 
     return () => {
       stream.close()
+      setStatus({ connection: 'disconnected' })
       window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       navigator.serviceWorker?.removeEventListener('message', handleServiceWorkerMessage)
       window.clearInterval(intervalId)

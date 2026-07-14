@@ -7,6 +7,7 @@ type SyncStatusStore = SyncStatusSnapshot & {
 
 export const useSyncStatusStore = create<SyncStatusStore>((set) => ({
   status: 'idle',
+  connection: 'disconnected',
   lastSyncedAt: null,
   error: null,
   setStatus: (next) => set(next),

@@ -1,9 +1,11 @@
 import type { NoteRecord, TaskRecord } from '../db/schema'
 
 export type SyncStatus = 'idle' | 'offline' | 'syncing' | 'synced' | 'error'
+export type SyncConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'fallback'
 
 export type SyncStatusSnapshot = {
   status: SyncStatus
+  connection: SyncConnectionStatus
   lastSyncedAt: string | null
   error: string | null
 }

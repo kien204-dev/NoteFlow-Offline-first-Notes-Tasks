@@ -15,7 +15,7 @@ import { UndoToast } from './features/trash/UndoToast'
 import { useTrashAutoPurge } from './features/trash/useTrashAutoPurge'
 import { InstallPrompt } from './lib/pwa/InstallPrompt'
 import { UpdatePrompt } from './lib/pwa/UpdatePrompt'
-import { SyncStatusBadge } from './lib/sync/SyncStatusBadge'
+import { SyncStatusDashboard } from './lib/sync/SyncStatusDashboard'
 import { useSyncController } from './lib/sync/useSyncController'
 
 type WorkspaceTab = 'notes' | 'tasks' | 'trash'
@@ -90,7 +90,7 @@ function App() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <SyncStatusBadge onOpenConflicts={() => setIsResolvingConflicts(true)} />
+            <SyncStatusDashboard onOpenConflicts={() => setIsResolvingConflicts(true)} />
             <InstallPrompt />
             <div
               className="grid grid-cols-3 rounded-sm border border-stone-300 bg-paper p-1 dark:border-zinc-700 dark:bg-zinc-900"
