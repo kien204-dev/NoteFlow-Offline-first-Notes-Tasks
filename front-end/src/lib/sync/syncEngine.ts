@@ -55,6 +55,7 @@ const noteFromServer = (note: ServerNote): NoteRecord => ({
   createdAt: toTimestamp(note.createdAt) ?? 0,
   updatedAt: toTimestamp(note.updatedAt) ?? 0,
   deletedAt: toTimestamp(note.deletedAt),
+  trashedAt: null,
   dirty: false,
   baseVersion: toTimestamp(note.updatedAt),
 })
@@ -67,6 +68,7 @@ const taskFromServer = (task: ServerTask): TaskRecord => ({
   createdAt: toTimestamp(task.createdAt) ?? 0,
   updatedAt: toTimestamp(task.updatedAt) ?? 0,
   deletedAt: toTimestamp(task.deletedAt),
+  trashedAt: null,
   dirty: false,
   baseVersion: toTimestamp(task.updatedAt),
 })
@@ -134,7 +136,7 @@ const mergeNote = async (database: NoteFlowDatabase, serverNote: ServerNote) => 
   }
 
   const local = await database.notes.get(serverNote.id)
-  const next = noteFromServer(serverNote)
+  const next = { ...noteFromServer(serverNote), trashedAt: local?.trashedAt ?? null }
 
   if (!local || next.updatedAt > local.updatedAt) {
     await database.notes.put(next)
@@ -148,7 +150,7 @@ const mergeTask = async (database: NoteFlowDatabase, serverTask: ServerTask) => 
   }
 
   const local = await database.tasks.get(serverTask.id)
-  const next = taskFromServer(serverTask)
+  const next = { ...taskFromServer(serverTask), trashedAt: local?.trashedAt ?? null }
 
   if (!local || next.updatedAt > local.updatedAt) {
     await database.tasks.put(next)
@@ -200,8 +202,8 @@ export const runSync = async ({
     setStatus({ status: 'syncing', error: null })
 
     const [dirtyNotes, dirtyTasks, lastSyncedAt] = await Promise.all([
-      database.notes.filter((note) => note.dirty).toArray(),
-      database.tasks.filter((task) => task.dirty).toArray(),
+      database.notes.filter((note) => note.dirty && (!note.trashedAt || note.deletedAt !== null)).toArray(),
+      database.tasks.filter((task) => task.dirty && (!task.trashedAt || task.deletedAt !== null)).toArray(),
       getLastSyncedAt(database),
     ])
 

@@ -8,6 +8,7 @@ export type NoteRecord = {
   createdAt: number
   updatedAt: number
   deletedAt: number | null
+  trashedAt: number | null
   dirty: boolean
   baseVersion: number | null
 }
@@ -28,6 +29,7 @@ export type TaskRecord = {
   createdAt: number
   updatedAt: number
   deletedAt: number | null
+  trashedAt: number | null
   dirty: boolean
   baseVersion: number | null
 }
@@ -93,6 +95,31 @@ export class NoteFlowDatabase extends Dexie {
             task.priority ??= 'medium'
             task.subtasks ??= []
           })
+      })
+
+    this.version(5)
+      .stores({
+        notes: '&id, updatedAt, deletedAt, trashedAt, dirty, baseVersion, *tags',
+        tasks:
+          '&id, updatedAt, deletedAt, trashedAt, dirty, baseVersion, completed, dueDate, priority, *tags',
+        syncMeta: '&key',
+        conflicts: '&id, entity, detectedAt',
+      })
+      .upgrade(async (transaction) => {
+        await Promise.all([
+          transaction
+            .table<NoteRecord, string>('notes')
+            .toCollection()
+            .modify((note) => {
+              note.trashedAt ??= null
+            }),
+          transaction
+            .table<TaskRecord, string>('tasks')
+            .toCollection()
+            .modify((task) => {
+              task.trashedAt ??= null
+            }),
+        ])
       })
   }
 }

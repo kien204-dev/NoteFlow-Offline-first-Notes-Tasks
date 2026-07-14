@@ -5,6 +5,8 @@ export type NoteFilter = {
   query?: string
   tags?: string[]
   includeDeleted?: boolean
+  includeTrashed?: boolean
+  onlyTrashed?: boolean
 }
 
 export type CreateNoteInput = {
@@ -28,6 +30,7 @@ export const create = async (
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
+    trashedAt: null,
     dirty: true,
     baseVersion: null,
   }
@@ -65,7 +68,7 @@ export const softDelete = async (
   if (!current) throw new Error(`Note not found: ${id}`)
 
   const now = Date.now()
-  const next = { ...current, deletedAt: now, updatedAt: now, dirty: true }
+  const next = { ...current, deletedAt: now, trashedAt: current.trashedAt ?? now, updatedAt: now, dirty: true }
   await database.notes.put(next)
   return next
 }
@@ -82,6 +85,30 @@ export const restore = async (
   return next
 }
 
+export const trash = async (
+  id: string,
+  database: NoteFlowDatabase = db,
+): Promise<NoteRecord> => {
+  const current = await database.notes.get(id)
+  if (!current) throw new Error(`Note not found: ${id}`)
+
+  const next = { ...current, trashedAt: Date.now() }
+  await database.notes.put(next)
+  return next
+}
+
+export const restoreFromTrash = async (
+  id: string,
+  database: NoteFlowDatabase = db,
+): Promise<NoteRecord> => {
+  const current = await database.notes.get(id)
+  if (!current) throw new Error(`Note not found: ${id}`)
+
+  const next = { ...current, trashedAt: null }
+  await database.notes.put(next)
+  return next
+}
+
 export const getById = (id: string, database: NoteFlowDatabase = db) => database.notes.get(id)
 
 export const list = async (
@@ -93,10 +120,14 @@ export const list = async (
   return notes.filter(
     (note) =>
       (filter.includeDeleted || note.deletedAt === null) &&
+      (filter.onlyTrashed ? note.trashedAt !== null : filter.includeTrashed || note.trashedAt === null) &&
       matchesTags(note.tags, filter.tags) &&
       matchesSearchText(filter.query, [note.title, note.content]),
   )
 }
+
+export const listTrashed = (database: NoteFlowDatabase = db) =>
+  list({ onlyTrashed: true, includeDeleted: false }, database)
 
 export const search = (query: string, database: NoteFlowDatabase = db) =>
   list({ query }, database)

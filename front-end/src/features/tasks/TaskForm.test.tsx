@@ -37,6 +37,7 @@ const taskRecord = (overrides: Partial<TaskRecord> = {}): TaskRecord => ({
   createdAt: 1_000,
   updatedAt: 1_000,
   deletedAt: null,
+  trashedAt: null,
   dirty: true,
   baseVersion: null,
   ...overrides,

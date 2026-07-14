@@ -49,6 +49,35 @@ describe('notesRepo', () => {
     expect(stored?.dirty).toBe(true)
   })
 
+  it('moves notes to trash without creating a sync tombstone', async () => {
+    const note = await notesRepo.create({ title: 'Trash me', content: '' }, database)
+
+    await notesRepo.trash(note.id, database)
+
+    expect(await notesRepo.list({}, database)).toEqual([])
+    expect(await notesRepo.listTrashed(database)).toHaveLength(1)
+    const stored = await notesRepo.getById(note.id, database)
+    expect(stored?.trashedAt).toEqual(expect.any(Number))
+    expect(stored?.deletedAt).toBeNull()
+  })
+
+  it('restores notes from trash and permanently deletes with the existing tombstone', async () => {
+    const note = await notesRepo.create({ title: 'Restore me', content: '' }, database)
+
+    await notesRepo.trash(note.id, database)
+    await notesRepo.restoreFromTrash(note.id, database)
+
+    expect(await notesRepo.list({}, database)).toHaveLength(1)
+    expect((await notesRepo.getById(note.id, database))?.trashedAt).toBeNull()
+
+    await notesRepo.trash(note.id, database)
+    await notesRepo.softDelete(note.id, database)
+
+    const stored = await notesRepo.getById(note.id, database)
+    expect(stored?.deletedAt).toEqual(expect.any(Number))
+    expect(stored?.dirty).toBe(true)
+  })
+
   it('searches and filters by tags on active notes', async () => {
     await notesRepo.create(
       { title: 'Interview prep', content: 'Explain Dexie', tags: ['career', 'sync'] },
@@ -76,6 +105,20 @@ describe('tasksRepo', () => {
     expect(updated.completed).toBe(true)
     expect(updated.updatedAt).toBe(6_000)
     expect(updated.dirty).toBe(true)
+  })
+
+  it('moves tasks to trash and restores them without tombstone deletion', async () => {
+    const task = await tasksRepo.create({ title: 'Trash task' }, database)
+
+    await tasksRepo.trash(task.id, database)
+
+    expect(await tasksRepo.list({}, database)).toEqual([])
+    expect(await tasksRepo.listTrashed(database)).toHaveLength(1)
+    expect((await tasksRepo.getById(task.id, database))?.deletedAt).toBeNull()
+
+    await tasksRepo.restoreFromTrash(task.id, database)
+    expect(await tasksRepo.list({}, database)).toHaveLength(1)
+    expect((await tasksRepo.getById(task.id, database))?.trashedAt).toBeNull()
   })
 
   it('creates tasks with due date and priority defaults', async () => {

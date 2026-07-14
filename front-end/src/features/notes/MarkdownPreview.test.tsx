@@ -13,6 +13,7 @@ const note = (overrides: Partial<NoteRecord> = {}): NoteRecord => ({
   createdAt: Date.now(),
   updatedAt: Date.now(),
   deletedAt: null,
+  trashedAt: null,
   dirty: true,
   baseVersion: null,
   ...overrides,

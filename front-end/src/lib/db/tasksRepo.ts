@@ -14,6 +14,8 @@ export type TaskFilter = {
   priority?: TaskPriorityFilter
   sortBy?: TaskSort
   includeDeleted?: boolean
+  includeTrashed?: boolean
+  onlyTrashed?: boolean
 }
 
 export type CreateTaskInput = {
@@ -85,6 +87,7 @@ export const create = async (
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
+    trashedAt: null,
     dirty: true,
     baseVersion: null,
   }
@@ -125,7 +128,7 @@ export const softDelete = async (
   if (!current) throw new Error(`Task not found: ${id}`)
 
   const now = Date.now()
-  const next = { ...current, deletedAt: now, updatedAt: now, dirty: true }
+  const next = { ...current, deletedAt: now, trashedAt: current.trashedAt ?? now, updatedAt: now, dirty: true }
   await database.tasks.put(next)
   return next
 }
@@ -142,6 +145,30 @@ export const restore = async (
   return next
 }
 
+export const trash = async (
+  id: string,
+  database: NoteFlowDatabase = db,
+): Promise<TaskRecord> => {
+  const current = await database.tasks.get(id)
+  if (!current) throw new Error(`Task not found: ${id}`)
+
+  const next = { ...current, trashedAt: Date.now() }
+  await database.tasks.put(next)
+  return next
+}
+
+export const restoreFromTrash = async (
+  id: string,
+  database: NoteFlowDatabase = db,
+): Promise<TaskRecord> => {
+  const current = await database.tasks.get(id)
+  if (!current) throw new Error(`Task not found: ${id}`)
+
+  const next = { ...current, trashedAt: null }
+  await database.tasks.put(next)
+  return next
+}
+
 export const getById = (id: string, database: NoteFlowDatabase = db) => database.tasks.get(id)
 
 export const list = async (
@@ -152,6 +179,7 @@ export const list = async (
   const filteredTasks = tasks.filter(
     (task) =>
       (filter.includeDeleted || task.deletedAt === null) &&
+      (filter.onlyTrashed ? task.trashedAt !== null : filter.includeTrashed || task.trashedAt === null) &&
       matchesTags(task.tags, filter.tags) &&
       matchesStatus(task, filter.status) &&
       matchesPriority(task, filter.priority) &&
@@ -163,6 +191,9 @@ export const list = async (
 
 export const search = (query: string, database: NoteFlowDatabase = db) =>
   list({ query }, database)
+
+export const listTrashed = (database: NoteFlowDatabase = db) =>
+  list({ onlyTrashed: true, includeDeleted: false }, database)
 
 export const getAllTags = async (database: NoteFlowDatabase = db) => {
   const tasks = await list({}, database)

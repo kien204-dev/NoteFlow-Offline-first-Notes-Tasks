@@ -62,7 +62,7 @@ export function TaskForm() {
 
   const handleDelete = async () => {
     if (!editingTaskId) return
-    await tasksRepo.softDelete(editingTaskId)
+    await tasksRepo.trash(editingTaskId)
     closeEditor()
   }
 

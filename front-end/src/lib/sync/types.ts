@@ -10,7 +10,7 @@ export type SyncStatusSnapshot = {
 
 export type ServerNote = Omit<
   NoteRecord,
-  'createdAt' | 'updatedAt' | 'deletedAt' | 'dirty' | 'baseVersion'
+  'createdAt' | 'updatedAt' | 'deletedAt' | 'trashedAt' | 'dirty' | 'baseVersion'
 > & {
   createdAt: string
   updatedAt: string
@@ -20,7 +20,7 @@ export type ServerNote = Omit<
 
 export type ServerTask = Omit<
   TaskRecord,
-  'createdAt' | 'updatedAt' | 'deletedAt' | 'dirty' | 'baseVersion'
+  'createdAt' | 'updatedAt' | 'deletedAt' | 'trashedAt' | 'dirty' | 'baseVersion'
 > & {
   createdAt: string
   updatedAt: string

@@ -10,12 +10,13 @@ import { ConflictResolver } from './features/sync/ConflictResolver'
 import { TaskForm } from './features/tasks/TaskForm'
 import { TaskList } from './features/tasks/TaskList'
 import { useTasksUiStore } from './features/tasks/store'
+import { TrashView } from './features/trash/TrashView'
 import { InstallPrompt } from './lib/pwa/InstallPrompt'
 import { UpdatePrompt } from './lib/pwa/UpdatePrompt'
 import { SyncStatusBadge } from './lib/sync/SyncStatusBadge'
 import { useSyncController } from './lib/sync/useSyncController'
 
-type WorkspaceTab = 'notes' | 'tasks'
+type WorkspaceTab = 'notes' | 'tasks' | 'trash'
 
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
@@ -31,6 +32,7 @@ function App() {
   const isNotesEditorVisible = activeTab === 'notes' && isNoteEditorOpen
   const isTasksEditorVisible = activeTab === 'tasks' && isTaskEditorOpen
   const isEditorVisible = isNotesEditorVisible || isTasksEditorVisible
+  const isTrashVisible = activeTab === 'trash'
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark)
@@ -88,10 +90,10 @@ function App() {
             <SyncStatusBadge onOpenConflicts={() => setIsResolvingConflicts(true)} />
             <InstallPrompt />
             <div
-              className="grid grid-cols-2 rounded-sm border border-stone-300 bg-paper p-1 dark:border-zinc-700 dark:bg-zinc-900"
+              className="grid grid-cols-3 rounded-sm border border-stone-300 bg-paper p-1 dark:border-zinc-700 dark:bg-zinc-900"
               aria-label="Workspace tabs"
             >
-              {(['notes', 'tasks'] as const).map((tab) => (
+              {(['notes', 'tasks', 'trash'] as const).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -121,6 +123,8 @@ function App() {
 
         {isResolvingConflicts ? (
           <ConflictResolver onClose={() => setIsResolvingConflicts(false)} />
+        ) : isTrashVisible ? (
+          <TrashView />
         ) : (
           <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(320px,420px)_1fr]">
             <div className={`${isEditorVisible ? 'hidden lg:block' : 'block'} min-h-0`}>

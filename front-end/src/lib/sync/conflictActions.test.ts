@@ -39,6 +39,7 @@ const createConflict = async () => {
     createdAt: 1_000,
     updatedAt: 1_500,
     deletedAt: null,
+    trashedAt: null,
     dirty: true,
     baseVersion: 1_000,
   })

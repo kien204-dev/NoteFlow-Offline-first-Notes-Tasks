@@ -12,6 +12,7 @@ export const noteFromServerVersion = (note: ServerNote): NoteRecord => ({
   createdAt: toTimestamp(note.createdAt) ?? 0,
   updatedAt: toTimestamp(note.updatedAt) ?? 0,
   deletedAt: toTimestamp(note.deletedAt),
+  trashedAt: null,
   dirty: false,
   baseVersion: toTimestamp(note.updatedAt),
 })

@@ -44,7 +44,7 @@ export function NoteEditor() {
 
   const handleDelete = async () => {
     if (!editingNoteId) return
-    await notesRepo.softDelete(editingNoteId)
+    await notesRepo.trash(editingNoteId)
     closeEditor()
   }
 
