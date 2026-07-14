@@ -5,6 +5,7 @@ export type SyncApiOptions = {
   baseUrl?: string
   fetcher?: typeof fetch
   accessToken?: string
+  clientId?: string
   refreshAccessToken?: () => Promise<AuthResponse>
   onTokenRefresh?: (response: AuthResponse) => void
   onAuthLost?: () => void
@@ -92,6 +93,7 @@ export const createSyncApi = (options: SyncApiOptions = {}) => {
   const authHeaders = (accessToken?: string) => ({
     'Content-Type': 'application/json',
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    ...(options.clientId ? { 'X-NoteFlow-Client-Id': options.clientId } : {}),
   })
 
   return {
