@@ -3,11 +3,12 @@ import express from 'express'
 import { requireAuth } from './auth/requireAuth.js'
 import { createAuthRouter } from './auth/routes.js'
 import { logger } from './logger.js'
+import { createSyncEventBroker } from './syncEvents.js'
 import { createSyncRepository } from './syncRepository.js'
 
 const readSyncItems = (body, key) => (Array.isArray(body?.[key]) ? body[key] : [])
 
-export const createApp = ({ pool, allowedOrigins } = {}) => {
+export const createApp = ({ pool, allowedOrigins, syncEventBroker = createSyncEventBroker() } = {}) => {
   const app = express()
   const syncRepository = createSyncRepository(pool)
 
@@ -29,6 +30,13 @@ export const createApp = ({ pool, allowedOrigins } = {}) => {
     response.json({ ok: true })
   })
 
+  app.get('/api/sync/events', requireAuth, (request, response) => {
+    const clientId = typeof request.get('X-NoteFlow-Client-Id') === 'string'
+      ? request.get('X-NoteFlow-Client-Id')
+      : null
+    syncEventBroker.connect(request.userId, response, clientId)
+  })
+
   app.post('/api/sync/push', requireAuth, async (request, response, next) => {
     try {
       const notes = readSyncItems(request.body, 'notes')
@@ -48,6 +56,16 @@ export const createApp = ({ pool, allowedOrigins } = {}) => {
       for (const task of tasks) {
         const result = await syncRepository.upsertTask(request.userId, task)
         if (result.status === 'saved') saved.tasks.push(result.id)
+      }
+
+      if (saved.notes.length > 0 || saved.tasks.length > 0) {
+        syncEventBroker.publishChanges(request.userId, {
+          excludeClientId: request.get('X-NoteFlow-Client-Id') ?? null,
+          changes: {
+            notes: saved.notes.length,
+            tasks: saved.tasks.length,
+          },
+        })
       }
 
       response.json({ saved, conflicts })

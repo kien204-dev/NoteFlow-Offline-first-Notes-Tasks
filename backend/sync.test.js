@@ -6,6 +6,7 @@ import { newDb } from 'pg-mem'
 import request from 'supertest'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createApp } from './app.js'
+import { createSyncEventBroker } from './syncEvents.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -114,6 +115,67 @@ describe('sync API', () => {
     expect(pullResponse.body.notes).toMatchObject([
       { id: note.id, title: 'Local note', deletedAt: null },
     ])
+  })
+
+  it('signals another SSE connection for the same user after a successful push', async () => {
+    const broker = createSyncEventBroker({ heartbeatMs: 60_000 })
+    app = createApp({ pool, allowedOrigins: 'http://localhost:5173', syncEventBroker: broker })
+    const user = await registerUser(app)
+    const otherUser = await registerUser(app)
+    const writes = []
+    const otherUserWrites = []
+    const createResponse = (target) => ({
+      status: () => createResponse(target),
+      set: () => createResponse(target),
+      flushHeaders: () => {},
+      write: (chunk) => target.push(chunk),
+      once: () => {},
+    })
+    const disconnectSameUser = broker.connect(user.user.id, createResponse(writes), 'client-b')
+    const disconnectOtherUser = broker.connect(
+      otherUser.user.id,
+      createResponse(otherUserWrites),
+      'client-c',
+    )
+
+    await request(app)
+      .post('/api/sync/push')
+      .set('Authorization', authHeader(user.accessToken))
+      .set('X-NoteFlow-Client-Id', 'client-a')
+      .send({ notes: [notePayload()], tasks: [] })
+      .expect(200)
+
+    expect(writes.join('')).toContain('event: sync-update')
+    expect(writes.join('')).toContain('"notes":1')
+    expect(otherUserWrites.join('')).not.toContain('event: sync-update')
+
+    disconnectSameUser()
+    disconnectOtherUser()
+  })
+
+  it('does not echo an SSE signal to the client that performed the push', async () => {
+    const broker = createSyncEventBroker({ heartbeatMs: 60_000 })
+    app = createApp({ pool, allowedOrigins: 'http://localhost:5173', syncEventBroker: broker })
+    const user = await registerUser(app)
+    const writes = []
+    const response = {
+      status: () => response,
+      set: () => response,
+      flushHeaders: () => {},
+      write: (chunk) => writes.push(chunk),
+      once: () => {},
+    }
+    const disconnect = broker.connect(user.user.id, response, 'client-a')
+
+    await request(app)
+      .post('/api/sync/push')
+      .set('Authorization', authHeader(user.accessToken))
+      .set('X-NoteFlow-Client-Id', 'client-a')
+      .send({ notes: [], tasks: [taskPayload()] })
+      .expect(200)
+
+    expect(writes.join('')).not.toContain('event: sync-update')
+    disconnect()
   })
 
   it('returns a conflict when baseVersion does not match the server version', async () => {
