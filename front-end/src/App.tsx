@@ -12,6 +12,7 @@ import { TaskList } from './features/tasks/TaskList'
 import { useTasksUiStore } from './features/tasks/store'
 import { TrashView } from './features/trash/TrashView'
 import { UndoToast } from './features/trash/UndoToast'
+import { useTrashAutoPurge } from './features/trash/useTrashAutoPurge'
 import { InstallPrompt } from './lib/pwa/InstallPrompt'
 import { UpdatePrompt } from './lib/pwa/UpdatePrompt'
 import { SyncStatusBadge } from './lib/sync/SyncStatusBadge'
@@ -23,6 +24,7 @@ function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const [route, setRoute] = useState(getCurrentRoute)
   useSyncController()
+  useTrashAutoPurge()
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('notes')
   const [isDark, setIsDark] = useState(false)
   const [isResolvingConflicts, setIsResolvingConflicts] = useState(false)

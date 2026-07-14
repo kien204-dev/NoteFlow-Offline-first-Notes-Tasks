@@ -3,6 +3,7 @@ import Dexie from 'dexie'
 import { createDatabase, type NoteFlowDatabase } from './schema'
 import * as notesRepo from './notesRepo'
 import * as tasksRepo from './tasksRepo'
+import { purgeExpiredTrash, TRASH_RETENTION_MS } from './trashRepo'
 
 let database: NoteFlowDatabase
 
@@ -119,6 +120,26 @@ describe('tasksRepo', () => {
     await tasksRepo.restoreFromTrash(task.id, database)
     expect(await tasksRepo.list({}, database)).toHaveLength(1)
     expect((await tasksRepo.getById(task.id, database))?.trashedAt).toBeNull()
+  })
+
+  it('auto-purges trashed notes and tasks after the retention window', async () => {
+    const now = new Date('2026-07-14T00:00:00.000Z').getTime()
+    const oldTrashTime = now - TRASH_RETENTION_MS - 1
+    const recentTrashTime = now - TRASH_RETENTION_MS + 1
+    const oldNote = await notesRepo.create({ title: 'Old trash note', content: '' }, database)
+    const recentTask = await tasksRepo.create({ title: 'Recent trash task' }, database)
+    const oldTask = await tasksRepo.create({ title: 'Old trash task' }, database)
+
+    await database.notes.update(oldNote.id, { trashedAt: oldTrashTime })
+    await database.tasks.update(recentTask.id, { trashedAt: recentTrashTime })
+    await database.tasks.update(oldTask.id, { trashedAt: oldTrashTime })
+
+    const result = await purgeExpiredTrash(database, now)
+
+    expect(result).toEqual({ notes: 1, tasks: 1 })
+    expect((await notesRepo.getById(oldNote.id, database))?.deletedAt).toBe(now)
+    expect((await tasksRepo.getById(oldTask.id, database))?.deletedAt).toBe(now)
+    expect((await tasksRepo.getById(recentTask.id, database))?.deletedAt).toBeNull()
   })
 
   it('creates tasks with due date and priority defaults', async () => {
