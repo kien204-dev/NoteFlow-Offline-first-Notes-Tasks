@@ -11,6 +11,7 @@ import { TaskForm } from './features/tasks/TaskForm'
 import { TaskList } from './features/tasks/TaskList'
 import { useTasksUiStore } from './features/tasks/store'
 import { TrashView } from './features/trash/TrashView'
+import { UndoToast } from './features/trash/UndoToast'
 import { InstallPrompt } from './lib/pwa/InstallPrompt'
 import { UpdatePrompt } from './lib/pwa/UpdatePrompt'
 import { SyncStatusBadge } from './lib/sync/SyncStatusBadge'
@@ -137,6 +138,7 @@ function App() {
           </div>
         )}
       </section>
+      <UndoToast />
       <UpdatePrompt />
     </main>
   )

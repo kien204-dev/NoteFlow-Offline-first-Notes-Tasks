@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import * as tasksRepo from '../../lib/db/tasksRepo'
+import { useUndoToastStore } from '../trash/undoToastStore'
 import { useTasksUiStore } from './store'
 
 const splitTags = (value: string) =>
@@ -13,6 +14,7 @@ export function TaskForm() {
   const editingTaskId = useTasksUiStore((state) => state.editingTaskId)
   const closeEditor = useTasksUiStore((state) => state.closeEditor)
   const openEditor = useTasksUiStore((state) => state.openEditor)
+  const showUndo = useUndoToastStore((state) => state.showUndo)
   const task = useLiveQuery(
     () => (editingTaskId ? tasksRepo.getById(editingTaskId) : undefined),
     [editingTaskId],
@@ -61,8 +63,9 @@ export function TaskForm() {
   }
 
   const handleDelete = async () => {
-    if (!editingTaskId) return
+    if (!editingTaskId || !task) return
     await tasksRepo.trash(editingTaskId)
+    showUndo({ id: editingTaskId, entity: 'task', title: task.title })
     closeEditor()
   }
 

@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import * as notesRepo from '../../lib/db/notesRepo'
 import { MarkdownPreview } from './MarkdownPreview'
 import { useNotesUiStore } from './store'
+import { useUndoToastStore } from '../trash/undoToastStore'
 
 const splitTags = (value: string) =>
   value
@@ -14,6 +15,7 @@ export function NoteEditor() {
   const editingNoteId = useNotesUiStore((state) => state.editingNoteId)
   const closeEditor = useNotesUiStore((state) => state.closeEditor)
   const openEditor = useNotesUiStore((state) => state.openEditor)
+  const showUndo = useUndoToastStore((state) => state.showUndo)
   const note = useLiveQuery(
     () => (editingNoteId ? notesRepo.getById(editingNoteId) : undefined),
     [editingNoteId],
@@ -43,8 +45,9 @@ export function NoteEditor() {
   }
 
   const handleDelete = async () => {
-    if (!editingNoteId) return
+    if (!editingNoteId || !note) return
     await notesRepo.trash(editingNoteId)
+    showUndo({ id: editingNoteId, entity: 'note', title: note.title })
     closeEditor()
   }
 
