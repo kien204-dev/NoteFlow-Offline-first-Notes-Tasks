@@ -40,16 +40,36 @@ const normalizeArray = (value) => (Array.isArray(value) ? value : [])
 
 const isNewer = (left, right) => new Date(left) > new Date(right)
 
+const mergeSubtasks = (newestSubtasks, olderSubtasks) => {
+  const merged = new Map()
+
+  for (const subtask of normalizeArray(newestSubtasks)) {
+    if (subtask?.id) merged.set(subtask.id, subtask)
+  }
+  for (const subtask of normalizeArray(olderSubtasks)) {
+    if (subtask?.id && !merged.has(subtask.id)) merged.set(subtask.id, subtask)
+  }
+
+  return [...merged.values()]
+}
+
 const resolveTaskConflict = (existing, incoming) => {
   if (!existing || sameVersion(incoming.baseVersion, existing.updatedAt)) {
     return incoming
   }
 
-  const newest = isNewer(existing.updatedAt, incoming.updatedAt) ? existing : incoming
+  const existingIsNewer = isNewer(existing.updatedAt, incoming.updatedAt)
+  const newest = existingIsNewer ? existing : incoming
+  const older = existingIsNewer ? incoming : existing
 
   return {
     ...newest,
     completed: Boolean(existing.completed || incoming.completed),
+    // The schema has one record-level updated_at, not per-field timestamps, so
+    // non-completed fields follow the newer record. Subtasks are the exception:
+    // union by stable id prevents an addition on either device from disappearing,
+    // while the newer record wins when both versions contain the same subtask.
+    subtasks: mergeSubtasks(newest.subtasks, older.subtasks),
     updatedAt: newest.updatedAt,
   }
 }
