@@ -340,6 +340,173 @@ describe('sync API', () => {
     ])
   })
 
+  it('keeps the newer task title when two clients edit from the same base version', async () => {
+    const { accessToken } = await registerUser(app)
+    const id = crypto.randomUUID()
+    const baseUpdatedAt = '2026-07-09T00:01:00.000Z'
+
+    await request(app)
+      .post('/api/sync/push')
+      .set('Authorization', authHeader(accessToken))
+      .send({ notes: [], tasks: [taskPayload({ id, updatedAt: baseUpdatedAt })] })
+      .expect(200)
+
+    await request(app)
+      .post('/api/sync/push')
+      .set('Authorization', authHeader(accessToken))
+      .send({
+        notes: [],
+        tasks: [
+          taskPayload({
+            id,
+            title: 'Newer server title',
+            baseVersion: baseUpdatedAt,
+            updatedAt: '2026-07-09T00:05:00.000Z',
+          }),
+        ],
+      })
+      .expect(200)
+
+    await request(app)
+      .post('/api/sync/push')
+      .set('Authorization', authHeader(accessToken))
+      .send({
+        notes: [],
+        tasks: [
+          taskPayload({
+            id,
+            title: 'Older offline title',
+            baseVersion: baseUpdatedAt,
+            updatedAt: '2026-07-09T00:03:00.000Z',
+          }),
+        ],
+      })
+      .expect(200)
+
+    const response = await request(app)
+      .get('/api/sync/pull')
+      .set('Authorization', authHeader(accessToken))
+      .query({ since: '2026-07-08T00:00:00.000Z' })
+      .expect(200)
+
+    expect(response.body.tasks[0]).toMatchObject({ id, title: 'Newer server title' })
+  })
+
+  it('unions concurrent subtask additions and uses the newer value for matching ids', async () => {
+    const { accessToken } = await registerUser(app)
+    const id = crypto.randomUUID()
+    const baseUpdatedAt = '2026-07-09T00:01:00.000Z'
+    const sharedSubtask = { id: 'shared', title: 'Shared step', completed: false }
+
+    await request(app)
+      .post('/api/sync/push')
+      .set('Authorization', authHeader(accessToken))
+      .send({
+        notes: [],
+        tasks: [taskPayload({ id, updatedAt: baseUpdatedAt, subtasks: [sharedSubtask] })],
+      })
+      .expect(200)
+
+    await request(app)
+      .post('/api/sync/push')
+      .set('Authorization', authHeader(accessToken))
+      .send({
+        notes: [],
+        tasks: [
+          taskPayload({
+            id,
+            baseVersion: baseUpdatedAt,
+            updatedAt: '2026-07-09T00:03:00.000Z',
+            subtasks: [
+              sharedSubtask,
+              { id: 'added-offline', title: 'Added on device A', completed: false },
+            ],
+          }),
+        ],
+      })
+      .expect(200)
+
+    await request(app)
+      .post('/api/sync/push')
+      .set('Authorization', authHeader(accessToken))
+      .send({
+        notes: [],
+        tasks: [
+          taskPayload({
+            id,
+            baseVersion: baseUpdatedAt,
+            updatedAt: '2026-07-09T00:04:00.000Z',
+            subtasks: [{ ...sharedSubtask, completed: true }],
+          }),
+        ],
+      })
+      .expect(200)
+
+    const response = await request(app)
+      .get('/api/sync/pull')
+      .set('Authorization', authHeader(accessToken))
+      .query({ since: '2026-07-08T00:00:00.000Z' })
+      .expect(200)
+
+    expect(response.body.tasks[0].subtasks).toEqual([
+      { ...sharedSubtask, completed: true },
+      { id: 'added-offline', title: 'Added on device A', completed: false },
+    ])
+  })
+
+  it('keeps completed true while retaining newer non-completed task fields', async () => {
+    const { accessToken } = await registerUser(app)
+    const id = crypto.randomUUID()
+    const baseUpdatedAt = '2026-07-09T00:01:00.000Z'
+
+    await request(app)
+      .post('/api/sync/push')
+      .set('Authorization', authHeader(accessToken))
+      .send({ notes: [], tasks: [taskPayload({ id, updatedAt: baseUpdatedAt })] })
+      .expect(200)
+
+    await request(app)
+      .post('/api/sync/push')
+      .set('Authorization', authHeader(accessToken))
+      .send({
+        notes: [],
+        tasks: [
+          taskPayload({
+            id,
+            completed: true,
+            baseVersion: baseUpdatedAt,
+            updatedAt: '2026-07-09T00:03:00.000Z',
+          }),
+        ],
+      })
+      .expect(200)
+
+    await request(app)
+      .post('/api/sync/push')
+      .set('Authorization', authHeader(accessToken))
+      .send({
+        notes: [],
+        tasks: [
+          taskPayload({
+            id,
+            completed: false,
+            priority: 'high',
+            baseVersion: baseUpdatedAt,
+            updatedAt: '2026-07-09T00:04:00.000Z',
+          }),
+        ],
+      })
+      .expect(200)
+
+    const response = await request(app)
+      .get('/api/sync/pull')
+      .set('Authorization', authHeader(accessToken))
+      .query({ since: '2026-07-08T00:00:00.000Z' })
+      .expect(200)
+
+    expect(response.body.tasks[0]).toMatchObject({ id, completed: true, priority: 'high' })
+  })
+
   it('ignores attempts to overwrite another user note or task by known id', async () => {
     const userA = await registerUser(app, { email: 'attacker@example.com' })
     const userB = await registerUser(app, { email: 'owner@example.com' })
